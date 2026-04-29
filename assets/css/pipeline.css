@@ -73,136 +73,59 @@
   background: #0e1612;
   overflow: hidden;
 }
-
-/* Fondo de "video" simulado: calle con perspectiva */
-.vp-bg {
+.demo-viewport video {
   position: absolute;
   inset: 0;
-  background:
-    repeating-linear-gradient(0deg, rgba(255,255,255,0.025) 0px, transparent 1px, transparent 4px),
-    radial-gradient(ellipse at 50% 75%, rgba(74,124,89,0.35) 0%, transparent 65%),
-    linear-gradient(180deg, #1a2620 0%, #0e1612 100%);
-}
-.vp-bg::after {
-  content: '';
-  position: absolute;
-  bottom: 0; left: 50%;
-  width: 70%; height: 75%;
-  transform: translateX(-50%);
-  background: linear-gradient(180deg, transparent, rgba(50,60,55,0.6));
-  clip-path: polygon(38% 0%, 62% 0%, 100% 100%, 0% 100%);
-}
-.vp-bg::before {
-  content: '';
-  position: absolute;
-  bottom: 0; left: 50%;
-  width: 6px; height: 75%;
-  transform: translateX(-50%);
-  background: repeating-linear-gradient(180deg, rgba(255,255,255,0.4) 0px, rgba(255,255,255,0.4) 18px, transparent 18px, transparent 32px);
-  animation: lane-move 1.5s linear infinite;
-}
-@keyframes lane-move {
-  from { background-position: 0 0; }
-  to { background-position: 0 50px; }
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
 }
 
-.vp-overlay {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-}
-.vp-bbox {
-  position: absolute;
-  border: 2px solid var(--forest);
-  border-radius: 2px;
-  background: rgba(74, 124, 89, 0.06);
-  animation: vp-bbox-pulse 0.6s ease-in-out;
-}
-.vp-bbox-label {
-  position: absolute;
-  top: -18px; left: -2px;
-  background: var(--forest);
-  color: var(--cream);
-  font-family: var(--font-mono);
-  font-size: 0.6rem;
-  font-weight: 700;
-  padding: 2px 6px;
-  border-radius: 2px;
-  letter-spacing: 0.05em;
-  white-space: nowrap;
-}
-.vp-bbox.car { border-color: var(--amber); }
-.vp-bbox.car .vp-bbox-label { background: var(--amber); color: var(--graphite); }
-.vp-bbox.bike { border-color: var(--rust); }
-.vp-bbox.bike .vp-bbox-label { background: var(--rust); }
-
-@keyframes vp-bbox-pulse {
-  0% { opacity: 0; transform: scale(0.95); }
-  100% { opacity: 1; transform: scale(1); }
-}
-
-.vp-meta-tl {
-  position: absolute;
-  top: 16px; left: 16px;
-  background: rgba(0, 0, 0, 0.6);
-  backdrop-filter: blur(10px);
-  padding: 8px 12px;
-  border-radius: 6px;
-  display: flex; flex-direction: column; gap: 2px;
-}
-.vp-meta-row { color: rgba(255, 255, 255, 0.85); font-size: 0.7rem; }
-.vp-meta-row.mono {
-  font-family: var(--font-mono);
-  font-size: 0.6rem;
-  color: var(--sage-bright);
-  letter-spacing: 0.08em;
-}
-
-.vp-meta-tr {
-  position: absolute;
-  top: 16px; right: 16px;
-  background: rgba(0, 0, 0, 0.6);
-  backdrop-filter: blur(10px);
-  padding: 6px 10px;
-  border-radius: 6px;
-  display: flex; align-items: center; gap: 6px;
-  font-family: var(--font-mono);
-  font-size: 0.65rem;
-  color: var(--rust);
-  letter-spacing: 0.1em;
-}
-.cam-rec-dot {
-  width: 7px; height: 7px;
-  border-radius: 50%;
-  background: var(--rust);
-  animation: pulse 1.5s infinite;
-}
-.vp-meta-tr .mono { color: var(--cream); }
-
-.vp-counter {
-  position: absolute;
-  bottom: 16px; left: 16px; right: 16px;
-  background: rgba(0, 0, 0, 0.7);
-  backdrop-filter: blur(10px);
-  border-radius: var(--r-md);
-  padding: 14px 20px;
+/* ── CAM TABS · Selector de cámaras ───────────────── */
+.cam-tabs {
   display: flex;
-  justify-content: space-around;
-  gap: 16px;
+  background: var(--graphite);
+  border-bottom: 1px solid var(--border);
 }
-.vp-count { display: flex; flex-direction: column; gap: 2px; align-items: center; }
-.vp-count .kpi-label {
-  color: rgba(255, 255, 255, 0.5);
-  font-size: 0.55rem;
+.cam-tab {
+  flex: 1;
+  padding: 14px 18px;
+  background: transparent;
+  border: none;
+  border-right: 1px solid rgba(184, 233, 134, 0.08);
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  transition: background var(--t-fast);
+  position: relative;
+}
+.cam-tab:last-child { border-right: none; }
+.cam-tab:hover { background: rgba(184, 233, 134, 0.06); }
+.cam-tab.active { background: rgba(184, 233, 134, 0.12); }
+.cam-tab.active::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 3px;
+  background: var(--sage-bright);
+}
+.cam-tab-id {
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
   letter-spacing: 0.18em;
+  color: var(--sage-bright);
 }
-.vp-count .num {
+.cam-tab-loc {
   font-family: var(--font-display);
-  font-size: 1.8rem;
-  letter-spacing: -0.04em;
+  font-size: 0.85rem;
+  letter-spacing: -0.01em;
   color: var(--cream);
 }
 
+/* ── DEMO CONTROLS ─────────────────────────────────── */
 .demo-controls {
   display: flex;
   justify-content: space-between;
@@ -210,13 +133,10 @@
   padding: 18px 24px;
   border-top: 1px solid var(--border);
   background: rgba(255, 255, 255, 0.4);
+  gap: 16px;
 }
-.scene-indicator {
-  font-family: var(--font-mono);
-  font-size: 0.7rem;
-  letter-spacing: 0.15em;
-  text-transform: uppercase;
-  color: var(--moss);
+.demo-info {
+  display: flex; flex-direction: column; gap: 4px;
 }
 
 /* ── DEMO SIDE ─────────────────────────────────────── */

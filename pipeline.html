@@ -78,42 +78,37 @@
 
     <div class="demo-layout">
       <div class="card demo-viewport-card">
-        <div class="demo-viewport" id="demo-viewport">
-          <div class="vp-bg"></div>
-          <div class="vp-overlay" id="vp-overlay"></div>
-          <div class="vp-meta-tl">
-            <div class="vp-meta-row"><span class="kicker no-line" style="color:#fff;">CAM-0521</span></div>
-            <div class="vp-meta-row mono">Estadio Azteca · Acceso A</div>
-          </div>
-          <div class="vp-meta-tr">
-            <span class="cam-rec-dot"></span>
-            <span class="mono">REC · <span id="vp-fps">30</span> FPS</span>
-          </div>
-          <div class="vp-counter" id="vp-counter">
-            <div class="vp-count">
-              <span class="kpi-label">Personas</span>
-              <span class="num" id="vp-c-ped">0</span>
-            </div>
-            <div class="vp-count">
-              <span class="kpi-label">Vehículos</span>
-              <span class="num" id="vp-c-car">0</span>
-            </div>
-            <div class="vp-count">
-              <span class="kpi-label">Bicicletas</span>
-              <span class="num" id="vp-c-bike">0</span>
-            </div>
-          </div>
+        <!-- Selector de cámaras tipo CCTV -->
+        <div class="cam-tabs" id="cam-tabs">
+          <button class="cam-tab active" data-cam="0">
+            <span class="cam-tab-id">CAM-0521</span>
+            <span class="cam-tab-loc">Estadio Azteca</span>
+          </button>
+          <button class="cam-tab" data-cam="1">
+            <span class="cam-tab-id">CAM-0188</span>
+            <span class="cam-tab-loc">Calzada Tlalpan</span>
+          </button>
+          <button class="cam-tab" data-cam="2">
+            <span class="cam-tab-id">CAM-0042</span>
+            <span class="cam-tab-loc">Insurgentes Sur</span>
+          </button>
         </div>
+
+        <div class="demo-viewport" id="demo-viewport">
+          <video id="vp-video" autoplay loop muted playsinline preload="auto">
+            <source src="assets/video/cam01-final.mp4" type="video/mp4">
+          </video>
+        </div>
+
         <div class="demo-controls">
-          <button class="btn btn-ghost" onclick="prevScene()">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 12H5M11 18l-6-6 6-6"/></svg>
-            Anterior
-          </button>
-          <div class="scene-indicator" id="scene-indicator">Escena 1 / 4</div>
-          <button class="btn btn-primary" onclick="nextScene()">
-            Siguiente
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
-          </button>
+          <div class="demo-info">
+            <span class="kicker no-line">Inferencia procesada</span>
+            <span class="mono text-mute">YOLOv8n · COCO 80 clases · CDMX 2026</span>
+          </div>
+          <a class="btn btn-primary" href="https://github.com/orlandocamc/SOMUS-26" target="_blank">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"/></svg>
+            Ver código en GitHub
+          </a>
         </div>
       </div>
 
@@ -124,17 +119,17 @@
             <div class="class-row">
               <span class="class-dot" style="background:var(--forest);"></span>
               <span class="class-name">person</span>
-              <span class="class-count" id="cl-ped">0</span>
+              <span class="class-count">person</span>
             </div>
             <div class="class-row">
               <span class="class-dot" style="background:var(--amber);"></span>
               <span class="class-name">car / truck / bus</span>
-              <span class="class-count" id="cl-car">0</span>
+              <span class="class-count">vehicle</span>
             </div>
             <div class="class-row">
               <span class="class-dot" style="background:var(--rust);"></span>
               <span class="class-name">bicycle / motorcycle</span>
-              <span class="class-count" id="cl-bike">0</span>
+              <span class="class-count">2-wheel</span>
             </div>
           </div>
         </div>
@@ -143,20 +138,24 @@
           <div class="kicker no-line" style="margin-bottom:12px;">Métricas inferencia</div>
           <div class="metrics-list">
             <div class="metric-row">
-              <span class="metric-key">Confianza media</span>
-              <span class="metric-val" id="m-conf">0.92</span>
+              <span class="metric-key">Modelo</span>
+              <span class="metric-val">YOLOv8n</span>
             </div>
             <div class="metric-row">
-              <span class="metric-key">Tiempo / frame</span>
-              <span class="metric-val" id="m-frame">33 ms</span>
+              <span class="metric-key">Parámetros</span>
+              <span class="metric-val">3.2M · INT8</span>
             </div>
             <div class="metric-row">
-              <span class="metric-key">Detecciones / s</span>
-              <span class="metric-val" id="m-ds">0</span>
+              <span class="metric-key">Confianza min</span>
+              <span class="metric-val">0.35</span>
             </div>
             <div class="metric-row">
               <span class="metric-key">IoU NMS</span>
               <span class="metric-val">0.45</span>
+            </div>
+            <div class="metric-row">
+              <span class="metric-key">Hardware target</span>
+              <span class="metric-val">RPi 5</span>
             </div>
           </div>
         </div>
