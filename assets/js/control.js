@@ -241,49 +241,24 @@ function hexToRgba(hex, alpha) {
   return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 }
 
-/* ═════ CÁMARAS CCTV SIMULADAS ═════ */
+/* ═════ CÁMARAS CCTV · VIDEO REAL PROCESADO POR YOLO ═════ */
 function initCameras() {
   const grid = document.getElementById('cams-grid');
+  // 4 cámaras, 3 videos reales (cam04 reusa cam02 con metadata distinta)
   const cams = [
-    { id: 'CAM-0042', loc: 'Insurgentes Sur · Eje 7', boxes: [
-      { type: 'ped',  x: 25, y: 55, w: 8,  h: 18, label: 'PERSONA · 0.94' },
-      { type: 'ped',  x: 38, y: 60, w: 7,  h: 16, label: 'PERSONA · 0.91' },
-      { type: 'car',  x: 52, y: 50, w: 18, h: 14, label: 'AUTO · 0.97' },
-      { type: 'bike', x: 18, y: 65, w: 9,  h: 12, label: 'BICI · 0.88' }
-    ], peds: 23, cars: 12, bikes: 4 },
-    { id: 'CAM-0188', loc: 'Calzada Tlalpan · Bandera', boxes: [
-      { type: 'car',  x: 28, y: 48, w: 22, h: 18, label: 'AUTO · 0.96' },
-      { type: 'car',  x: 56, y: 52, w: 20, h: 16, label: 'AUTO · 0.93' },
-      { type: 'car',  x: 12, y: 62, w: 16, h: 14, label: 'BUS · 0.89' },
-      { type: 'ped',  x: 78, y: 56, w: 6,  h: 14, label: 'PERSONA · 0.85' }
-    ], peds: 8, cars: 38, bikes: 1 },
-    { id: 'CAM-0317', loc: 'Periférico Sur · Cuemanco', boxes: [
-      { type: 'car',  x: 30, y: 50, w: 24, h: 18, label: 'AUTO · 0.98' },
-      { type: 'car',  x: 60, y: 55, w: 18, h: 14, label: 'AUTO · 0.94' },
-      { type: 'car',  x: 8,  y: 62, w: 14, h: 12, label: 'AUTO · 0.91' }
-    ], peds: 2, cars: 47, bikes: 0 },
-    { id: 'CAM-0521', loc: 'Estadio Azteca · Acceso A', boxes: [
-      { type: 'ped',  x: 15, y: 45, w: 7,  h: 16, label: 'PERSONA · 0.96' },
-      { type: 'ped',  x: 26, y: 50, w: 6,  h: 14, label: 'PERSONA · 0.93' },
-      { type: 'ped',  x: 38, y: 52, w: 7,  h: 15, label: 'PERSONA · 0.95' },
-      { type: 'ped',  x: 50, y: 48, w: 8,  h: 17, label: 'PERSONA · 0.92' },
-      { type: 'ped',  x: 62, y: 54, w: 6,  h: 13, label: 'PERSONA · 0.89' },
-      { type: 'ped',  x: 74, y: 50, w: 7,  h: 16, label: 'PERSONA · 0.94' }
-    ], peds: 142, cars: 6, bikes: 9 }
+    { id: 'CAM-0521', loc: 'Estadio Azteca · Acceso A',  src: 'assets/video/cam01-final.mp4', peds: 142, cars: 6,  bikes: 9 },
+    { id: 'CAM-0188', loc: 'Calzada Tlalpan · Bandera',  src: 'assets/video/cam02-final.mp4', peds: 8,   cars: 38, bikes: 1 },
+    { id: 'CAM-0042', loc: 'Insurgentes Sur · Eje 7',    src: 'assets/video/cam03-final.mp4', peds: 23,  cars: 12, bikes: 4 },
+    { id: 'CAM-0317', loc: 'Periférico Sur · Cuemanco',  src: 'assets/video/cam02-final.mp4', peds: 2,   cars: 47, bikes: 0 }
   ];
 
-  grid.innerHTML = cams.map(cam => `
+  grid.innerHTML = cams.map((cam, i) => `
     <div class="cam-feed" title="${cam.loc}">
-      <div class="cam-feed-bg"></div>
+      <video class="cam-feed-video" autoplay loop muted playsinline preload="auto"
+             src="${cam.src}"
+             style="animation-delay: ${i * 0.5}s;"></video>
       <div class="cam-meta">${cam.id}</div>
       <div class="cam-rec"><span class="cam-rec-dot"></span> REC · 30FPS</div>
-      <div class="cam-overlay">
-        ${cam.boxes.map(b => `
-          <div class="bbox ${b.type}" style="left:${b.x}%;top:${b.y}%;width:${b.w}%;height:${b.h}%;">
-            <span class="bbox-label">${b.label}</span>
-          </div>
-        `).join('')}
-      </div>
       <div class="cam-stats">
         <span><span class="cam-stat-key">PED</span>${cam.peds}</span>
         <span><span class="cam-stat-key">VEH</span>${cam.cars}</span>
@@ -292,6 +267,17 @@ function initCameras() {
       </div>
     </div>
   `).join('');
+
+  // Forzar play (algunos navegadores bloquean autoplay sin interacción)
+  document.querySelectorAll('.cam-feed-video').forEach(v => {
+    v.play().catch(() => {/* autoplay blocked, no-op */});
+    // Desincronizar los videos (que cada uno empiece en momento aleatorio)
+    v.addEventListener('loadedmetadata', () => {
+      if (v.duration && !isNaN(v.duration)) {
+        v.currentTime = Math.random() * Math.min(v.duration, 3);
+      }
+    });
+  });
 }
 
 /* ═════ ALERTAS ═════ */
