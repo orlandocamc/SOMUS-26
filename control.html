@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SOMUS-26 · Centro de Control de Movilidad</title>
+
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Archivo+Black&family=Archivo:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link rel="stylesheet" href="assets/css/shared.css" />
+  <link rel="stylesheet" href="assets/css/control.css" />
+</head>
+<body class="theme-dark">
+
+  <!-- ═════ TOP BAR ═════ -->
+  <nav class="nav">
+    <a href="index.html" class="nav-brand">
+      <span class="nav-brand-mark"></span>
+      SOMUS<span class="nav-brand-meta">26 · CONTROL</span>
+    </a>
+    <div class="nav-links">
+      <a href="index.html" class="nav-link">Planeador</a>
+      <a href="control.html" class="nav-link active">Centro de Control</a>
+      <a href="pipeline.html" class="nav-link">Pipeline IA</a>
+    </div>
+    <div class="ctrl-status">
+      <span class="ctrl-clock mono" id="ctrl-clock">--:--:--</span>
+      <span class="pill pill-success"><span class="live-dot"></span> SISTEMA EN LÍNEA</span>
+    </div>
+  </nav>
+
+  <!-- ═════ COMMAND HEADER ═════ -->
+  <header class="cmd-header">
+    <div class="cmd-header-left">
+      <div class="kicker">Mobility Operations Center</div>
+      <h1 class="display" style="font-size: clamp(2.5rem, 4.5vw, 4rem);">
+        Centro de Control<br/><em>CDMX · Mundial 2026</em>
+      </h1>
+    </div>
+    <div class="cmd-header-right">
+      <div class="cmd-stat">
+        <span class="kpi-label">Cámaras activas</span>
+        <span class="num cmd-stat-val" id="cs-cameras">2 412</span>
+      </div>
+      <div class="cmd-stat">
+        <span class="kpi-label">Detecciones / s</span>
+        <span class="num cmd-stat-val" id="cs-detections">14 380</span>
+      </div>
+      <div class="cmd-stat">
+        <span class="kpi-label">Latencia media</span>
+        <span class="num cmd-stat-val" id="cs-latency">87 ms</span>
+      </div>
+      <div class="cmd-stat">
+        <span class="kpi-label">Uptime</span>
+        <span class="num cmd-stat-val" style="color: var(--sage-bright);">99.97%</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- ═════ MAIN GRID ═════ -->
+  <main class="ctrl-grid">
+
+    <!-- LEFT: Map + Heatmap -->
+    <section class="card panel-map">
+      <div class="panel-head">
+        <div>
+          <span class="kicker no-line">Mapa operacional</span>
+          <h3 class="card-title">Densidad de flujo · CDMX</h3>
+        </div>
+        <div class="panel-controls">
+          <button class="layer-btn active" data-layer="ped">Peatonal</button>
+          <button class="layer-btn" data-layer="veh">Vehicular</button>
+          <button class="layer-btn" data-layer="metro">Metro</button>
+        </div>
+      </div>
+      <div id="map-control"></div>
+      <div class="panel-foot">
+        <div class="map-stat">
+          <span class="kpi-label">Hotspot detectado</span>
+          <span class="num">Centro Histórico</span>
+        </div>
+        <div class="map-stat">
+          <span class="kpi-label">Pico actual</span>
+          <span class="num" id="ms-peak">--%</span>
+        </div>
+        <div class="map-stat">
+          <span class="kpi-label">Personas estimadas</span>
+          <span class="num" id="ms-people">--</span>
+        </div>
+        <div class="map-legend-h">
+          <span><i style="background:#b8e986"></i>Bajo</span>
+          <span><i style="background:#e8a020"></i>Medio</span>
+          <span><i style="background:#e8654b"></i>Alto</span>
+          <span><i style="background:#c44b2b"></i>Saturado</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- RIGHT TOP: KPI Cluster -->
+    <section class="kpi-cluster">
+      <div class="card kpi-card">
+        <span class="kpi-label">Vehículos / min</span>
+        <span class="kpi-value" id="k-vehicles">--</span>
+        <span class="kpi-trend up" id="k-vehicles-trend">▲ 12% vs media</span>
+        <canvas class="spark" data-key="vehicles"></canvas>
+      </div>
+      <div class="card kpi-card">
+        <span class="kpi-label">Peatones / min</span>
+        <span class="kpi-value green" id="k-peds">--</span>
+        <span class="kpi-trend up" id="k-peds-trend">▲ 8% vs media</span>
+        <canvas class="spark" data-key="peds"></canvas>
+      </div>
+      <div class="card kpi-card">
+        <span class="kpi-label">Aforo Metro</span>
+        <span class="kpi-value amber" id="k-metro">--%</span>
+        <span class="kpi-trend down" id="k-metro-trend">▼ Saturación L3</span>
+        <canvas class="spark" data-key="metro"></canvas>
+      </div>
+      <div class="card kpi-card">
+        <span class="kpi-label">ECOBICI dispon.</span>
+        <span class="kpi-value" id="k-ecobici">--</span>
+        <span class="kpi-trend up">▲ 134 estaciones OK</span>
+        <canvas class="spark" data-key="ecobici"></canvas>
+      </div>
+      <div class="card kpi-card">
+        <span class="kpi-label">CO₂ evitado hoy</span>
+        <span class="kpi-value green" id="k-co2">-- kg</span>
+        <span class="kpi-trend up">▲ Equiv. 24 árboles</span>
+        <canvas class="spark" data-key="co2"></canvas>
+      </div>
+      <div class="card kpi-card">
+        <span class="kpi-label">AQI promedio</span>
+        <span class="kpi-value" id="k-aqi">--</span>
+        <span class="kpi-trend" id="k-aqi-trend">— Aceptable</span>
+        <canvas class="spark" data-key="aqi"></canvas>
+      </div>
+    </section>
+
+    <!-- BOTTOM-LEFT: Cámaras -->
+    <section class="card panel-cams">
+      <div class="panel-head">
+        <div>
+          <span class="kicker no-line">CCTV · YOLOv8</span>
+          <h3 class="card-title">Detección por cámara</h3>
+        </div>
+        <span class="pill"><span class="live-dot"></span> 4 / 2412 nodos</span>
+      </div>
+      <div class="cams-grid" id="cams-grid"></div>
+    </section>
+
+    <!-- BOTTOM-CENTER: Alertas -->
+    <section class="card panel-alerts">
+      <div class="panel-head">
+        <div>
+          <span class="kicker no-line">Sistema de alertas</span>
+          <h3 class="card-title">Eventos activos</h3>
+        </div>
+        <span class="pill pill-warning" id="alerts-count">5 ACTIVAS</span>
+      </div>
+      <div class="alerts-list" id="alerts-list"></div>
+    </section>
+
+    <!-- BOTTOM-RIGHT: Air + Modal Mix -->
+    <section class="card panel-air">
+      <div class="panel-head">
+        <div>
+          <span class="kicker no-line">Calidad del aire</span>
+          <h3 class="card-title">Estaciones SIMAT</h3>
+        </div>
+        <span class="mono text-mute" style="font-size: 0.65rem;">PM2.5 · µg/m³</span>
+      </div>
+      <div class="air-list" id="air-list"></div>
+      <div class="modal-mix">
+        <div class="modal-mix-head">
+          <span class="kicker no-line">Reparto modal</span>
+          <span class="mono text-mute" style="font-size: 0.6rem;">Tiempo real</span>
+        </div>
+        <div class="modal-mix-bar">
+          <div class="mix-seg" style="width: 32%; background: var(--sage-bright);" title="Metro">Metro 32%</div>
+          <div class="mix-seg" style="width: 22%; background: var(--moss);" title="Auto">Auto 22%</div>
+          <div class="mix-seg" style="width: 18%; background: var(--amber);" title="Metrobús">M.Bús 18%</div>
+          <div class="mix-seg" style="width: 14%; background: var(--coral);" title="Peatonal">Pie 14%</div>
+          <div class="mix-seg" style="width: 9%;  background: var(--sky);" title="ECOBICI">Bici 9%</div>
+          <div class="mix-seg" style="width: 5%;  background: var(--steel);" title="Otros">Otros 5%</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- BOTTOM: Terminal Log -->
+    <section class="card panel-log">
+      <div class="panel-head">
+        <div>
+          <span class="kicker no-line">Operations log</span>
+          <h3 class="card-title">Telemetría del sistema</h3>
+        </div>
+        <span class="mono text-mute" style="font-size: 0.65rem;">stdout · INFO</span>
+      </div>
+      <div class="terminal" id="terminal"></div>
+    </section>
+
+  </main>
+
+  <!-- Scripts -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+  <script src="assets/js/data.js"></script>
+  <script src="assets/js/control.js"></script>
+</body>
+</html>

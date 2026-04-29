@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SOMUS-26 · Pipeline IA · Visión por Computadora</title>
+
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Archivo+Black&family=Archivo:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="assets/css/shared.css" />
+  <link rel="stylesheet" href="assets/css/pipeline.css" />
+</head>
+<body class="theme-light">
+
+  <!-- ═════ NAV ═════ -->
+  <nav class="nav">
+    <a href="index.html" class="nav-brand">
+      <span class="nav-brand-mark"></span>
+      SOMUS<span class="nav-brand-meta">26 · CDMX</span>
+    </a>
+    <div class="nav-links">
+      <a href="index.html" class="nav-link">Planeador</a>
+      <a href="control.html" class="nav-link">Centro de Control</a>
+      <a href="pipeline.html" class="nav-link active">Pipeline IA</a>
+    </div>
+  </nav>
+
+  <!-- ═════ HERO ═════ -->
+  <section class="pipeline-hero">
+    <div class="hero-numerals" aria-hidden="true">
+      <span class="hero-num">IA</span>
+    </div>
+    <div class="hero-content fade-up">
+      <div class="kicker">Computer Vision Pipeline</div>
+      <h1 class="display">
+        Del píxel<br/>
+        <em>a la decisión.</em>
+      </h1>
+      <p class="lede">
+        El sistema de SOMUS-26 procesa flujo de video en tiempo real con YOLOv8,
+        agrega detecciones por nodo, alimenta modelos de demanda y publica decisiones
+        a la capa de aplicación. Aquí el detalle ingenieril.
+      </p>
+    </div>
+
+    <div class="hero-stats fade-up-2">
+      <div class="hero-stat">
+        <span class="kpi-label">Modelo</span>
+        <span class="hero-stat-val">YOLOv8n</span>
+        <span class="hero-stat-meta">3.2M parámetros · INT8</span>
+      </div>
+      <div class="hero-stat">
+        <span class="kpi-label">Inferencia</span>
+        <span class="hero-stat-val">30 FPS</span>
+        <span class="hero-stat-meta">Edge · Raspberry Pi 5</span>
+      </div>
+      <div class="hero-stat">
+        <span class="kpi-label">Latencia</span>
+        <span class="hero-stat-val">87 ms</span>
+        <span class="hero-stat-meta">P95 end-to-end</span>
+      </div>
+      <div class="hero-stat">
+        <span class="kpi-label">mAP @ 0.5</span>
+        <span class="hero-stat-val">0.78</span>
+        <span class="hero-stat-meta">COCO val2017</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═════ DEMO YOLO ═════ -->
+  <section class="section" id="demo">
+    <div class="section-header">
+      <div>
+        <div class="kicker">Demo en vivo</div>
+        <h2 class="h2">Detección<br/><em style="color:var(--moss);font-style:normal">cuadro a cuadro.</em></h2>
+      </div>
+      <span class="pill"><span class="live-dot"></span> Inferencia simulada · 30 FPS</span>
+    </div>
+
+    <div class="demo-layout">
+      <div class="card demo-viewport-card">
+        <div class="demo-viewport" id="demo-viewport">
+          <div class="vp-bg"></div>
+          <div class="vp-overlay" id="vp-overlay"></div>
+          <div class="vp-meta-tl">
+            <div class="vp-meta-row"><span class="kicker no-line" style="color:#fff;">CAM-0521</span></div>
+            <div class="vp-meta-row mono">Estadio Azteca · Acceso A</div>
+          </div>
+          <div class="vp-meta-tr">
+            <span class="cam-rec-dot"></span>
+            <span class="mono">REC · <span id="vp-fps">30</span> FPS</span>
+          </div>
+          <div class="vp-counter" id="vp-counter">
+            <div class="vp-count">
+              <span class="kpi-label">Personas</span>
+              <span class="num" id="vp-c-ped">0</span>
+            </div>
+            <div class="vp-count">
+              <span class="kpi-label">Vehículos</span>
+              <span class="num" id="vp-c-car">0</span>
+            </div>
+            <div class="vp-count">
+              <span class="kpi-label">Bicicletas</span>
+              <span class="num" id="vp-c-bike">0</span>
+            </div>
+          </div>
+        </div>
+        <div class="demo-controls">
+          <button class="btn btn-ghost" onclick="prevScene()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 12H5M11 18l-6-6 6-6"/></svg>
+            Anterior
+          </button>
+          <div class="scene-indicator" id="scene-indicator">Escena 1 / 4</div>
+          <button class="btn btn-primary" onclick="nextScene()">
+            Siguiente
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+          </button>
+        </div>
+      </div>
+
+      <aside class="demo-side">
+        <div class="card card-tight">
+          <div class="kicker no-line" style="margin-bottom:12px;">Clases detectadas (COCO)</div>
+          <div class="class-list">
+            <div class="class-row">
+              <span class="class-dot" style="background:var(--forest);"></span>
+              <span class="class-name">person</span>
+              <span class="class-count" id="cl-ped">0</span>
+            </div>
+            <div class="class-row">
+              <span class="class-dot" style="background:var(--amber);"></span>
+              <span class="class-name">car / truck / bus</span>
+              <span class="class-count" id="cl-car">0</span>
+            </div>
+            <div class="class-row">
+              <span class="class-dot" style="background:var(--rust);"></span>
+              <span class="class-name">bicycle / motorcycle</span>
+              <span class="class-count" id="cl-bike">0</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="card card-tight">
+          <div class="kicker no-line" style="margin-bottom:12px;">Métricas inferencia</div>
+          <div class="metrics-list">
+            <div class="metric-row">
+              <span class="metric-key">Confianza media</span>
+              <span class="metric-val" id="m-conf">0.92</span>
+            </div>
+            <div class="metric-row">
+              <span class="metric-key">Tiempo / frame</span>
+              <span class="metric-val" id="m-frame">33 ms</span>
+            </div>
+            <div class="metric-row">
+              <span class="metric-key">Detecciones / s</span>
+              <span class="metric-val" id="m-ds">0</span>
+            </div>
+            <div class="metric-row">
+              <span class="metric-key">IoU NMS</span>
+              <span class="metric-val">0.45</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="card card-tight" style="background: var(--forest); color: var(--cream); border-color: var(--moss);">
+          <div class="kicker no-line" style="color:var(--sage-light); margin-bottom:8px;">Por qué YOLOv8n</div>
+          <p style="font-size: 0.82rem; line-height: 1.6; color: rgba(245,240,232,0.85);">
+            La variante <strong style="color:var(--sage-bright);">nano</strong> (3.2M parámetros) cabe en
+            Raspberry Pi 5 con cuantización INT8 logrando 30 FPS sin GPU. Ideal para
+            despliegue masivo sobre infraestructura existente del C5.
+          </p>
+        </div>
+      </aside>
+    </div>
+  </section>
+
+  <!-- ═════ ARQUITECTURA ═════ -->
+  <section class="section section-arch" id="arquitectura">
+    <div class="section-header">
+      <div>
+        <div class="kicker">Arquitectura del sistema</div>
+        <h2 class="h2">Cómo fluyen los datos.</h2>
+      </div>
+      <span class="pill">Edge → Aggregator → API → UI</span>
+    </div>
+
+    <div class="arch-diagram card">
+      <svg viewBox="0 0 1200 480" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto;display:block;">
+        <!-- Background dot grid -->
+        <defs>
+          <pattern id="dots" width="20" height="20" patternUnits="userSpaceOnUse">
+            <circle cx="2" cy="2" r="1" fill="rgba(74,124,89,0.15)"/>
+          </pattern>
+          <linearGradient id="flow1" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stop-color="#2d5a3d" stop-opacity="0"/>
+            <stop offset="50%" stop-color="#2d5a3d" stop-opacity="0.8"/>
+            <stop offset="100%" stop-color="#2d5a3d" stop-opacity="0"/>
+          </linearGradient>
+        </defs>
+        <rect width="1200" height="480" fill="url(#dots)"/>
+
+        <!-- ── Capa 1: SENSING (cámaras CCTV) ── -->
+        <g class="arch-layer" transform="translate(40, 40)">
+          <text x="0" y="0" font-family="Space Mono" font-size="11" letter-spacing="2" fill="#4a7c59" font-weight="700">01 · SENSING</text>
+          <text x="0" y="18" font-family="Archivo Black" font-size="14" fill="#2c3428">Captura visual</text>
+          <g transform="translate(0, 36)">
+            <rect width="180" height="120" rx="14" fill="#fff" stroke="#4a7c59" stroke-width="1.5"/>
+            <text x="14" y="28" font-family="Archivo Black" font-size="13" fill="#2d5a3d">CCTV C5 + Webcams</text>
+            <text x="14" y="50" font-family="Space Mono" font-size="10" fill="#7a9a72">2 412 nodos · CDMX</text>
+            <line x1="14" y1="62" x2="166" y2="62" stroke="#cddfc0" stroke-width="1"/>
+            <text x="14" y="82" font-family="Space Mono" font-size="10" fill="#4a7c59">→ RTSP / HTTP</text>
+            <text x="14" y="98" font-family="Space Mono" font-size="10" fill="#4a7c59">→ 1080p · 30 FPS</text>
+            <text x="14" y="114" font-family="Space Mono" font-size="9" fill="#8aaa80">vía convenio C5</text>
+          </g>
+        </g>
+
+        <!-- ── Capa 2: EDGE ── -->
+        <g class="arch-layer" transform="translate(290, 40)">
+          <text x="0" y="0" font-family="Space Mono" font-size="11" letter-spacing="2" fill="#4a7c59" font-weight="700">02 · EDGE</text>
+          <text x="0" y="18" font-family="Archivo Black" font-size="14" fill="#2c3428">Inferencia local</text>
+          <g transform="translate(0, 36)">
+            <rect width="180" height="120" rx="14" fill="#2d5a3d" stroke="#2d5a3d" stroke-width="1.5"/>
+            <text x="14" y="28" font-family="Archivo Black" font-size="13" fill="#f5f0e8">Raspberry Pi 5</text>
+            <text x="14" y="50" font-family="Space Mono" font-size="10" fill="#cddfc0">YOLOv8n · INT8</text>
+            <line x1="14" y1="62" x2="166" y2="62" stroke="rgba(255,255,255,0.18)" stroke-width="1"/>
+            <text x="14" y="82" font-family="Space Mono" font-size="10" fill="#b8e986">→ ONNX Runtime</text>
+            <text x="14" y="98" font-family="Space Mono" font-size="10" fill="#b8e986">→ OpenCV pipeline</text>
+            <text x="14" y="114" font-family="Space Mono" font-size="9" fill="#cddfc0">87ms latencia P95</text>
+          </g>
+        </g>
+
+        <!-- ── Capa 3: AGGREGATOR ── -->
+        <g class="arch-layer" transform="translate(540, 40)">
+          <text x="0" y="0" font-family="Space Mono" font-size="11" letter-spacing="2" fill="#4a7c59" font-weight="700">03 · AGGREGATOR</text>
+          <text x="0" y="18" font-family="Archivo Black" font-size="14" fill="#2c3428">Mensajería + datos</text>
+          <g transform="translate(0, 36)">
+            <rect width="180" height="120" rx="14" fill="#fff" stroke="#4a7c59" stroke-width="1.5"/>
+            <text x="14" y="28" font-family="Archivo Black" font-size="13" fill="#2d5a3d">MQTT + TimescaleDB</text>
+            <text x="14" y="50" font-family="Space Mono" font-size="10" fill="#7a9a72">Stream temporal</text>
+            <line x1="14" y1="62" x2="166" y2="62" stroke="#cddfc0" stroke-width="1"/>
+            <text x="14" y="82" font-family="Space Mono" font-size="10" fill="#4a7c59">+ ECOBICI GBFS</text>
+            <text x="14" y="98" font-family="Space Mono" font-size="10" fill="#4a7c59">+ SIMAT · OSM</text>
+            <text x="14" y="114" font-family="Space Mono" font-size="9" fill="#8aaa80">14 380 events/s</text>
+          </g>
+        </g>
+
+        <!-- ── Capa 4: BRAIN ── -->
+        <g class="arch-layer" transform="translate(790, 40)">
+          <text x="0" y="0" font-family="Space Mono" font-size="11" letter-spacing="2" fill="#c44b2b" font-weight="700">04 · BRAIN</text>
+          <text x="0" y="18" font-family="Archivo Black" font-size="14" fill="#2c3428">Modelos & lógica</text>
+          <g transform="translate(0, 36)">
+            <rect width="180" height="120" rx="14" fill="#fff" stroke="#c44b2b" stroke-width="1.5"/>
+            <text x="14" y="28" font-family="Archivo Black" font-size="13" fill="#c44b2b">Decisión · Routing</text>
+            <text x="14" y="50" font-family="Space Mono" font-size="10" fill="#7a9a72">Optimización</text>
+            <line x1="14" y1="62" x2="166" y2="62" stroke="#f0d4cc" stroke-width="1"/>
+            <text x="14" y="82" font-family="Space Mono" font-size="10" fill="#c44b2b">→ Dijkstra + ML</text>
+            <text x="14" y="98" font-family="Space Mono" font-size="10" fill="#c44b2b">→ CO₂ SEMARNAT</text>
+            <text x="14" y="114" font-family="Space Mono" font-size="9" fill="#8aaa80">Heatmap · alertas</text>
+          </g>
+        </g>
+
+        <!-- ── Capa 5: PRESENTATION ── -->
+        <g class="arch-layer" transform="translate(1040, 40)">
+          <text x="0" y="0" font-family="Space Mono" font-size="11" letter-spacing="2" fill="#4a7c59" font-weight="700">05 · UI</text>
+          <text x="0" y="18" font-family="Archivo Black" font-size="14" fill="#2c3428">Aplicación</text>
+          <g transform="translate(0, 36)">
+            <rect width="120" height="120" rx="14" fill="#cddfc0" stroke="#4a7c59" stroke-width="1.5"/>
+            <text x="12" y="28" font-family="Archivo Black" font-size="13" fill="#2d5a3d">SOMUS-26</text>
+            <text x="12" y="50" font-family="Space Mono" font-size="10" fill="#4a7c59">Web · GitHub Pages</text>
+            <line x1="12" y1="62" x2="108" y2="62" stroke="rgba(74,124,89,0.3)" stroke-width="1"/>
+            <text x="12" y="82" font-family="Space Mono" font-size="10" fill="#2d5a3d">→ Ciudadano</text>
+            <text x="12" y="98" font-family="Space Mono" font-size="10" fill="#2d5a3d">→ Operador</text>
+            <text x="12" y="114" font-family="Space Mono" font-size="9" fill="#5a7a52">Leaflet · Chart.js</text>
+          </g>
+        </g>
+
+        <!-- Conectores -->
+        <g class="arch-flow">
+          <!-- 1 -> 2 -->
+          <line x1="220" y1="136" x2="290" y2="136" stroke="#4a7c59" stroke-width="2" stroke-dasharray="4 4"/>
+          <polygon points="290,136 282,132 282,140" fill="#4a7c59"/>
+          <text x="240" y="128" font-family="Space Mono" font-size="9" fill="#4a7c59" letter-spacing="1">RTSP</text>
+
+          <line x1="470" y1="136" x2="540" y2="136" stroke="#4a7c59" stroke-width="2" stroke-dasharray="4 4"/>
+          <polygon points="540,136 532,132 532,140" fill="#4a7c59"/>
+          <text x="488" y="128" font-family="Space Mono" font-size="9" fill="#4a7c59" letter-spacing="1">JSON</text>
+
+          <line x1="720" y1="136" x2="790" y2="136" stroke="#4a7c59" stroke-width="2" stroke-dasharray="4 4"/>
+          <polygon points="790,136 782,132 782,140" fill="#4a7c59"/>
+          <text x="738" y="128" font-family="Space Mono" font-size="9" fill="#4a7c59" letter-spacing="1">SQL</text>
+
+          <line x1="970" y1="136" x2="1040" y2="136" stroke="#4a7c59" stroke-width="2" stroke-dasharray="4 4"/>
+          <polygon points="1040,136 1032,132 1032,140" fill="#4a7c59"/>
+          <text x="985" y="128" font-family="Space Mono" font-size="9" fill="#4a7c59" letter-spacing="1">REST</text>
+        </g>
+
+        <!-- ── Capa OUTPUT (abajo) ── -->
+        <g transform="translate(40, 240)">
+          <text x="0" y="0" font-family="Space Mono" font-size="11" letter-spacing="2" fill="#4a7c59" font-weight="700">SALIDAS DEL SISTEMA</text>
+          <text x="0" y="18" font-family="Archivo Black" font-size="14" fill="#2c3428">Lo que recibe el usuario final</text>
+        </g>
+
+        <!-- Output cards -->
+        <g transform="translate(40, 290)">
+          <rect width="265" height="150" rx="14" fill="#f5f0e8" stroke="#cddfc0" stroke-width="1.5"/>
+          <text x="20" y="32" font-family="Archivo Black" font-size="14" fill="#2d5a3d">⚙ Optimización</text>
+          <text x="20" y="58" font-family="Space Mono" font-size="10" fill="#7a9a72" letter-spacing="1">CIUDADANO</text>
+          <text x="20" y="82" font-family="Archivo" font-size="11" fill="#2c3428">3 rutas multimodales con</text>
+          <text x="20" y="98" font-family="Archivo" font-size="11" fill="#2c3428">tiempo, costo y CO₂ real</text>
+          <text x="20" y="120" font-family="Space Mono" font-size="10" fill="#4a7c59">→ Decisión informada</text>
+        </g>
+
+        <g transform="translate(330, 290)">
+          <rect width="265" height="150" rx="14" fill="#f5f0e8" stroke="#cddfc0" stroke-width="1.5"/>
+          <text x="20" y="32" font-family="Archivo Black" font-size="14" fill="#2d5a3d">⌬ Dashboard</text>
+          <text x="20" y="58" font-family="Space Mono" font-size="10" fill="#7a9a72" letter-spacing="1">OPERADOR / GOBIERNO</text>
+          <text x="20" y="82" font-family="Archivo" font-size="11" fill="#2c3428">KPIs en vivo, mapa de calor,</text>
+          <text x="20" y="98" font-family="Archivo" font-size="11" fill="#2c3428">alertas, calidad del aire</text>
+          <text x="20" y="120" font-family="Space Mono" font-size="10" fill="#4a7c59">→ Toma de decisiones</text>
+        </g>
+
+        <g transform="translate(620, 290)">
+          <rect width="265" height="150" rx="14" fill="#f5f0e8" stroke="#cddfc0" stroke-width="1.5"/>
+          <text x="20" y="32" font-family="Archivo Black" font-size="14" fill="#2d5a3d">≋ Métricas</text>
+          <text x="20" y="58" font-family="Space Mono" font-size="10" fill="#7a9a72" letter-spacing="1">SOSTENIBILIDAD</text>
+          <text x="20" y="82" font-family="Archivo" font-size="11" fill="#2c3428">CO₂ evitado, PM2.5, AQI,</text>
+          <text x="20" y="98" font-family="Archivo" font-size="11" fill="#2c3428">reparto modal acumulado</text>
+          <text x="20" y="120" font-family="Space Mono" font-size="10" fill="#4a7c59">→ Indicadores ODS</text>
+        </g>
+
+        <g transform="translate(910, 290)">
+          <rect width="250" height="150" rx="14" fill="#2d5a3d" stroke="#2d5a3d" stroke-width="1.5"/>
+          <text x="20" y="32" font-family="Archivo Black" font-size="14" fill="#f5f0e8">⚠ Alertas</text>
+          <text x="20" y="58" font-family="Space Mono" font-size="10" fill="#cddfc0" letter-spacing="1">SISTEMA / EMERGENCIAS</text>
+          <text x="20" y="82" font-family="Archivo" font-size="11" fill="#f5f0e8">Saturación, congestión,</text>
+          <text x="20" y="98" font-family="Archivo" font-size="11" fill="#f5f0e8">incidentes viales en tiempo real</text>
+          <text x="20" y="120" font-family="Space Mono" font-size="10" fill="#b8e986">→ Respuesta &lt; 60 s</text>
+        </g>
+      </svg>
+    </div>
+  </section>
+
+  <!-- ═════ FUENTES DE DATOS ═════ -->
+  <section class="section" id="datos">
+    <div class="section-header">
+      <div>
+        <div class="kicker">Datos abiertos</div>
+        <h2 class="h2">Fuentes integradas.</h2>
+      </div>
+      <span class="pill">Verificables · Públicas</span>
+    </div>
+
+    <div class="sources-grid grid-3" id="sources-grid"></div>
+  </section>
+
+  <!-- ═════ ODS ═════ -->
+  <section class="section section-ods" id="ods">
+    <div class="section-header">
+      <div>
+        <div class="kicker">Impacto declarado</div>
+        <h2 class="h2">Objetivos de Desarrollo Sostenible.</h2>
+      </div>
+      <span class="pill">Agenda 2030 · ONU</span>
+    </div>
+
+    <div class="ods-grid" id="ods-grid"></div>
+  </section>
+
+  <!-- ═════ FOOTER ═════ -->
+  <footer class="foot">
+    <div class="foot-brand">
+      <h3>SOMUS-26</h3>
+      <p>Sistema de Optimización de Movilidad Urbana Sostenible.<br/>Universidad Iberoamericana · CDMX 2026.</p>
+    </div>
+    <div class="foot-col">
+      <h4>Sistema</h4>
+      <a href="index.html">Planeador</a>
+      <a href="control.html">Centro de Control</a>
+      <a href="pipeline.html">Pipeline IA</a>
+    </div>
+    <div class="foot-col">
+      <h4>Datos</h4>
+      <a href="https://gbfs.mex.lyftbikes.com" target="_blank">ECOBICI GBFS</a>
+      <a href="https://aire.cdmx.gob.mx" target="_blank">SIMAT</a>
+      <a href="https://datos.cdmx.gob.mx" target="_blank">Datos Abiertos</a>
+    </div>
+    <div class="foot-col">
+      <h4>Académico</h4>
+      <a href="index.html#about">Equipo</a>
+      <a href="#" onclick="return false;">Reporte técnico</a>
+      <a href="#ods">ODS</a>
+    </div>
+    <div class="foot-bottom">
+      <span>SOMUS · 2026</span>
+      <span>Construido en CDMX · GitHub Pages</span>
+    </div>
+  </footer>
+
+  <script src="assets/js/data.js"></script>
+  <script src="assets/js/pipeline.js"></script>
+</body>
+</html>

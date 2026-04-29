@@ -1,1417 +1,371 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>SUMOS 26 — Movilidad Urbana Sostenible</title>
-<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Archivo+Black&family=Archivo:wght@300;400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
-<style>
-:root {
-  --sage: #b8cba8;
-  --sage-light: #cddfc0;
-  --sage-dark: #8aab78;
-  --moss: #4a7c59;
-  --forest: #2d5a3d;
-  --cream: #f5f0e8;
-  --charcoal: #1e2420;
-  --ink: #2c3428;
-  --accent: #e8a020;
-  --accent2: #c44b2b;
-  --white: #ffffff;
-  --glass: rgba(255,255,255,0.55);
-  --glass-border: rgba(255,255,255,0.8);
-}
-
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-html { scroll-behavior: smooth; }
-
-body {
-  font-family: 'Archivo', sans-serif;
-  background: #c8dab8;
-  background-image:
-    radial-gradient(ellipse at 20% 0%, #d6e8c4 0%, transparent 60%),
-    radial-gradient(ellipse at 80% 100%, #a8c494 0%, transparent 60%),
-    url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%2368956a' fill-opacity='0.06'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
-  min-height: 100vh;
-  color: var(--ink);
-}
-
-/* ── NAV ── */
-nav {
-  position: fixed;
-  top: 0; left: 0; right: 0;
-  z-index: 1000;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 40px;
-  height: 64px;
-  background: rgba(180,210,165,0.75);
-  backdrop-filter: blur(16px);
-  border-bottom: 1px solid var(--glass-border);
-}
-
-.nav-logo {
-  font-family: 'Archivo Black', sans-serif;
-  font-size: 1.6rem;
-  color: var(--forest);
-  letter-spacing: -1px;
-  text-decoration: none;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.logo-badge {
-  background: var(--forest);
-  color: var(--cream);
-  font-family: 'Space Mono', monospace;
-  font-size: 0.55rem;
-  padding: 3px 7px;
-  border-radius: 4px;
-  letter-spacing: 1px;
-}
-
-.nav-links {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  list-style: none;
-}
-
-.nav-links li { position: relative; }
-
-.nav-links a {
-  font-family: 'Archivo', sans-serif;
-  font-weight: 500;
-  font-size: 0.875rem;
-  color: var(--forest);
-  text-decoration: none;
-  padding: 8px 16px;
-  border-radius: 8px;
-  transition: background 0.2s;
-  display: block;
-  letter-spacing: 0.02em;
-}
-
-.nav-links a:hover { background: rgba(255,255,255,0.5); }
-
-.nav-links .dropdown-menu {
-  display: none;
-  position: absolute;
-  top: calc(100% + 8px);
-  right: 0;
-  background: rgba(240,250,235,0.97);
-  backdrop-filter: blur(20px);
-  border: 1px solid var(--glass-border);
-  border-radius: 12px;
-  min-width: 220px;
-  box-shadow: 0 16px 40px rgba(30,60,30,0.15);
-  overflow: hidden;
-  animation: dropIn 0.2s ease;
-}
-
-@keyframes dropIn {
-  from { opacity: 0; transform: translateY(-8px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-.nav-links li:hover .dropdown-menu { display: block; }
-
-.dropdown-menu a {
-  border-radius: 0;
-  padding: 12px 20px;
-  font-size: 0.875rem;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  border-bottom: 1px solid rgba(100,150,80,0.1);
-}
-
-.dropdown-menu a:last-child { border-bottom: none; }
-.dropdown-menu a:hover { background: rgba(100,170,80,0.1); }
-
-.dropdown-icon { font-size: 1rem; }
-
-.nav-cta {
-  background: var(--forest) !important;
-  color: var(--cream) !important;
-  border-radius: 8px !important;
-  font-weight: 600 !important;
-}
-.nav-cta:hover { background: var(--moss) !important; }
-
-/* ── HERO ── */
-.hero {
-  min-height: 100vh;
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  align-items: center;
-  padding: 80px 60px 40px;
-  gap: 48px;
-}
-
-.hero-left { max-width: 560px; }
-
-.hero-eyebrow {
-  font-family: 'Space Mono', monospace;
-  font-size: 0.7rem;
-  letter-spacing: 3px;
-  text-transform: uppercase;
-  color: var(--moss);
-  margin-bottom: 20px;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.hero-eyebrow::before {
-  content: '';
-  display: block;
-  width: 32px;
-  height: 2px;
-  background: var(--moss);
-}
-
-.hero-title {
-  font-family: 'Archivo Black', sans-serif;
-  font-size: clamp(3.5rem, 6vw, 5.5rem);
-  line-height: 0.92;
-  color: var(--charcoal);
-  letter-spacing: -3px;
-  margin-bottom: 24px;
-}
-
-.hero-title span {
-  color: var(--forest);
-  display: block;
-}
-
-.hero-subtitle {
-  font-size: 1rem;
-  line-height: 1.7;
-  color: #4a5e44;
-  margin-bottom: 40px;
-  max-width: 420px;
-}
-
-.search-panel {
-  background: var(--glass);
-  backdrop-filter: blur(20px);
-  border: 1px solid var(--glass-border);
-  border-radius: 20px;
-  padding: 28px;
-  box-shadow: 0 8px 32px rgba(30,60,30,0.1);
-}
-
-.search-row {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 16px;
-  margin-bottom: 16px;
-}
-
-.input-group {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.input-group label {
-  font-family: 'Space Mono', monospace;
-  font-size: 0.65rem;
-  letter-spacing: 2px;
-  text-transform: uppercase;
-  color: var(--moss);
-}
-
-.input-group input {
-  background: rgba(255,255,255,0.7);
-  border: 1.5px solid rgba(100,150,80,0.3);
-  border-radius: 10px;
-  padding: 12px 16px;
-  font-family: 'Archivo', sans-serif;
-  font-size: 0.9rem;
-  color: var(--charcoal);
-  transition: border-color 0.2s, background 0.2s;
-  outline: none;
-}
-
-.input-group input:focus {
-  border-color: var(--moss);
-  background: rgba(255,255,255,0.9);
-}
-
-.input-group input::placeholder { color: #8aaa80; }
-
-.btn-route {
-  width: 100%;
-  background: var(--forest);
-  color: var(--cream);
-  border: none;
-  border-radius: 12px;
-  padding: 16px;
-  font-family: 'Archivo Black', sans-serif;
-  font-size: 1rem;
-  letter-spacing: 0.5px;
-  cursor: pointer;
-  transition: background 0.2s, transform 0.15s;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-}
-
-.btn-route:hover { background: var(--moss); transform: translateY(-1px); }
-.btn-route:active { transform: translateY(0); }
-
-/* ── MAP ── */
-.hero-right {
-  position: relative;
-  height: 520px;
-}
-
-.map-card {
-  height: 100%;
-  border-radius: 24px;
-  overflow: hidden;
-  border: 3px solid var(--glass-border);
-  box-shadow: 0 24px 60px rgba(30,60,30,0.2), 0 0 0 1px rgba(255,255,255,0.3);
-  position: relative;
-}
-
-#map { height: 100%; width: 100%; }
-
-.map-overlay-badge {
-  position: absolute;
-  top: 16px;
-  left: 16px;
-  z-index: 800;
-  background: rgba(245,240,232,0.95);
-  backdrop-filter: blur(10px);
-  border-radius: 10px;
-  padding: 10px 14px;
-  font-family: 'Space Mono', monospace;
-  font-size: 0.65rem;
-  letter-spacing: 1px;
-  color: var(--forest);
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  border: 1px solid rgba(100,150,80,0.2);
-}
-
-.live-dot {
-  width: 8px; height: 8px;
-  border-radius: 50%;
-  background: #44cc44;
-  animation: pulse 1.5s infinite;
-}
-
-@keyframes pulse {
-  0%, 100% { opacity: 1; transform: scale(1); }
-  50% { opacity: 0.5; transform: scale(1.3); }
-}
-
-/* ── STATS STRIP ── */
-.stats-strip {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 1px;
-  background: rgba(100,150,80,0.15);
-  border-top: 1px solid rgba(100,150,80,0.2);
-  border-bottom: 1px solid rgba(100,150,80,0.2);
-}
-
-.stat-item {
-  background: rgba(200,220,185,0.6);
-  backdrop-filter: blur(10px);
-  padding: 32px 40px;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.stat-number {
-  font-family: 'Archivo Black', sans-serif;
-  font-size: 2.8rem;
-  color: var(--forest);
-  letter-spacing: -2px;
-  line-height: 1;
-}
-
-.stat-label {
-  font-family: 'Space Mono', monospace;
-  font-size: 0.65rem;
-  letter-spacing: 2px;
-  text-transform: uppercase;
-  color: var(--moss);
-}
-
-/* ── SECTION ── */
-.section {
-  padding: 80px 60px;
-}
-
-.section-header {
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  margin-bottom: 48px;
-  padding-bottom: 24px;
-  border-bottom: 1px solid rgba(100,150,80,0.2);
-}
-
-.section-title {
-  font-family: 'Archivo Black', sans-serif;
-  font-size: 2.4rem;
-  color: var(--charcoal);
-  letter-spacing: -1.5px;
-  line-height: 1.1;
-}
-
-.section-tag {
-  font-family: 'Space Mono', monospace;
-  font-size: 0.65rem;
-  letter-spacing: 3px;
-  text-transform: uppercase;
-  color: var(--moss);
-  background: rgba(100,150,80,0.15);
-  padding: 6px 14px;
-  border-radius: 20px;
-}
-
-/* ── EMISSIONS SECTION ── */
-#emisiones { background: rgba(180,210,165,0.3); }
-
-.emissions-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 24px;
-  margin-bottom: 32px;
-}
-
-.chart-card {
-  background: var(--glass);
-  backdrop-filter: blur(20px);
-  border: 1px solid var(--glass-border);
-  border-radius: 20px;
-  padding: 28px;
-  box-shadow: 0 4px 20px rgba(30,60,30,0.08);
-}
-
-.chart-card-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 20px;
-}
-
-.chart-title {
-  font-family: 'Archivo Black', sans-serif;
-  font-size: 1.1rem;
-  color: var(--charcoal);
-  letter-spacing: -0.5px;
-}
-
-.chart-badge {
-  font-family: 'Space Mono', monospace;
-  font-size: 0.6rem;
-  letter-spacing: 1.5px;
-  padding: 4px 10px;
-  border-radius: 6px;
-}
-
-.badge-red { background: rgba(196,75,43,0.15); color: var(--accent2); }
-.badge-green { background: rgba(74,124,89,0.15); color: var(--forest); }
-
-.chart-canvas-wrap { position: relative; height: 220px; }
-
-.emission-summary {
-  background: var(--glass);
-  backdrop-filter: blur(20px);
-  border: 1px solid var(--glass-border);
-  border-radius: 20px;
-  padding: 32px;
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 24px;
-  box-shadow: 0 4px 20px rgba(30,60,30,0.08);
-}
-
-.summary-metric { text-align: center; }
-
-.summary-value {
-  font-family: 'Archivo Black', sans-serif;
-  font-size: 2.2rem;
-  letter-spacing: -1px;
-  line-height: 1;
-  margin-bottom: 4px;
-}
-
-.green-val { color: var(--forest); }
-.red-val { color: var(--accent2); }
-.accent-val { color: var(--accent); }
-
-.summary-label {
-  font-family: 'Space Mono', monospace;
-  font-size: 0.62rem;
-  letter-spacing: 1.5px;
-  text-transform: uppercase;
-  color: var(--moss);
-}
-
-/* ── RUTAS ── */
-.routes-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 20px;
-}
-
-.route-card {
-  background: var(--glass);
-  backdrop-filter: blur(20px);
-  border: 1px solid var(--glass-border);
-  border-radius: 20px;
-  padding: 28px;
-  cursor: pointer;
-  transition: transform 0.2s, box-shadow 0.2s;
-  position: relative;
-  overflow: hidden;
-}
-
-.route-card::before {
-  content: '';
-  position: absolute;
-  top: 0; left: 0;
-  width: 4px;
-  height: 100%;
-}
-
-.route-card.r1::before { background: var(--forest); }
-.route-card.r2::before { background: var(--accent); }
-.route-card.r3::before { background: var(--accent2); }
-
-.route-card:hover { transform: translateY(-4px); box-shadow: 0 16px 40px rgba(30,60,30,0.15); }
-
-.route-type {
-  font-family: 'Space Mono', monospace;
-  font-size: 0.62rem;
-  letter-spacing: 2px;
-  text-transform: uppercase;
-  margin-bottom: 12px;
-}
-
-.r1 .route-type { color: var(--forest); }
-.r2 .route-type { color: var(--accent); }
-.r3 .route-type { color: var(--accent2); }
-
-.route-name {
-  font-family: 'Archivo Black', sans-serif;
-  font-size: 1.3rem;
-  color: var(--charcoal);
-  letter-spacing: -0.5px;
-  margin-bottom: 16px;
-}
-
-.route-meta {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  margin-bottom: 20px;
-}
-
-.route-meta-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-size: 0.85rem;
-}
-
-.meta-key { color: #7a9a72; }
-.meta-val { font-weight: 600; color: var(--charcoal); font-family: 'Space Mono', monospace; font-size: 0.8rem; }
-
-.route-bar {
-  height: 6px;
-  background: rgba(100,150,80,0.15);
-  border-radius: 3px;
-  overflow: hidden;
-}
-
-.route-fill {
-  height: 100%;
-  border-radius: 3px;
-  transition: width 1s ease;
-}
-
-.r1 .route-fill { background: var(--forest); width: 30%; }
-.r2 .route-fill { background: var(--accent); width: 55%; }
-.r3 .route-fill { background: var(--accent2); width: 80%; }
-
-/* ── ABOUT ── */
-#acerca { background: var(--forest); color: var(--cream); }
-
-#acerca .section-title { color: var(--cream); }
-#acerca .section-tag { background: rgba(255,255,255,0.15); color: rgba(255,255,255,0.7); }
-#acerca .section-header { border-bottom-color: rgba(255,255,255,0.15); }
-
-.about-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 48px;
-  align-items: start;
-}
-
-.about-text p {
-  font-size: 1rem;
-  line-height: 1.75;
-  color: rgba(245,240,232,0.8);
-  margin-bottom: 20px;
-}
-
-.about-text strong { color: var(--sage-light); }
-
-.ods-chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-top: 24px;
-}
-
-.ods-chip {
-  background: rgba(255,255,255,0.1);
-  border: 1px solid rgba(255,255,255,0.2);
-  color: var(--cream);
-  font-family: 'Space Mono', monospace;
-  font-size: 0.65rem;
-  letter-spacing: 1px;
-  padding: 6px 14px;
-  border-radius: 20px;
-}
-
-.team-cards {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 16px;
-}
-
-.team-card {
-  background: rgba(255,255,255,0.07);
-  border: 1px solid rgba(255,255,255,0.15);
-  border-radius: 16px;
-  padding: 24px;
-  transition: background 0.2s;
-}
-
-.team-card:hover { background: rgba(255,255,255,0.12); }
-
-.team-avatar {
-  width: 52px; height: 52px;
-  border-radius: 50%;
-  background: var(--sage-dark);
-  margin-bottom: 14px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-family: 'Archivo Black', sans-serif;
-  font-size: 1.2rem;
-  color: var(--forest);
-}
-
-.team-name {
-  font-family: 'Archivo Black', sans-serif;
-  font-size: 1rem;
-  color: var(--cream);
-  letter-spacing: -0.3px;
-  margin-bottom: 4px;
-}
-
-.team-role {
-  font-family: 'Space Mono', monospace;
-  font-size: 0.62rem;
-  letter-spacing: 1.5px;
-  text-transform: uppercase;
-  color: var(--sage-light);
-}
-
-.institution-block {
-  grid-column: 1 / -1;
-  background: rgba(255,255,255,0.05);
-  border: 1px solid rgba(255,255,255,0.1);
-  border-radius: 16px;
-  padding: 24px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.inst-name {
-  font-family: 'Archivo Black', sans-serif;
-  font-size: 1rem;
-  color: var(--cream);
-  margin-bottom: 4px;
-}
-
-.inst-detail {
-  font-family: 'Space Mono', monospace;
-  font-size: 0.62rem;
-  letter-spacing: 1.5px;
-  color: var(--sage-light);
-}
-
-.professor-tag {
-  background: rgba(184,203,168,0.2);
-  border: 1px solid rgba(184,203,168,0.3);
-  border-radius: 10px;
-  padding: 10px 18px;
-  text-align: right;
-}
-
-.prof-label { font-family: 'Space Mono', monospace; font-size: 0.6rem; letter-spacing: 2px; color: var(--sage); text-transform: uppercase; margin-bottom: 4px; }
-.prof-name { font-family: 'Archivo Black', sans-serif; font-size: 0.95rem; color: var(--cream); }
-
-/* ── TECH SECTION ── */
-.tech-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 20px;
-}
-
-.tech-card {
-  background: var(--glass);
-  backdrop-filter: blur(20px);
-  border: 1px solid var(--glass-border);
-  border-radius: 20px;
-  padding: 28px;
-}
-
-.tech-icon {
-  font-size: 2rem;
-  margin-bottom: 16px;
-  display: block;
-}
-
-.tech-name {
-  font-family: 'Archivo Black', sans-serif;
-  font-size: 1.1rem;
-  color: var(--charcoal);
-  letter-spacing: -0.3px;
-  margin-bottom: 8px;
-}
-
-.tech-desc {
-  font-size: 0.875rem;
-  line-height: 1.65;
-  color: #5a7a52;
-}
-
-.tech-spec {
-  margin-top: 14px;
-  font-family: 'Space Mono', monospace;
-  font-size: 0.65rem;
-  color: var(--moss);
-  background: rgba(100,150,80,0.1);
-  padding: 6px 10px;
-  border-radius: 6px;
-  display: inline-block;
-}
-
-/* ── MODAL ── */
-.modal-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(20,40,20,0.7);
-  backdrop-filter: blur(8px);
-  z-index: 2000;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.3s;
-}
-
-.modal-overlay.open {
-  opacity: 1;
-  pointer-events: all;
-}
-
-.modal {
-  background: var(--cream);
-  border-radius: 24px;
-  padding: 40px;
-  max-width: 560px;
-  width: 90%;
-  position: relative;
-  transform: scale(0.95);
-  transition: transform 0.3s;
-  max-height: 90vh;
-  overflow-y: auto;
-}
-
-.modal-overlay.open .modal { transform: scale(1); }
-
-.modal-close {
-  position: absolute;
-  top: 16px; right: 16px;
-  background: rgba(100,150,80,0.1);
-  border: none;
-  width: 36px; height: 36px;
-  border-radius: 50%;
-  font-size: 1.2rem;
-  cursor: pointer;
-  color: var(--forest);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: background 0.2s;
-}
-
-.modal-close:hover { background: rgba(100,150,80,0.2); }
-
-.modal-title {
-  font-family: 'Archivo Black', sans-serif;
-  font-size: 1.6rem;
-  color: var(--charcoal);
-  letter-spacing: -0.8px;
-  margin-bottom: 8px;
-}
-
-.modal-sub {
-  font-family: 'Space Mono', monospace;
-  font-size: 0.65rem;
-  letter-spacing: 2px;
-  color: var(--moss);
-  text-transform: uppercase;
-  margin-bottom: 24px;
-}
-
-.modal-route-info {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 16px;
-  margin-bottom: 24px;
-}
-
-.modal-metric {
-  background: rgba(100,150,80,0.08);
-  border-radius: 12px;
-  padding: 16px;
-}
-
-.modal-metric-val {
-  font-family: 'Archivo Black', sans-serif;
-  font-size: 1.8rem;
-  color: var(--forest);
-  letter-spacing: -1px;
-}
-
-.modal-metric-key {
-  font-family: 'Space Mono', monospace;
-  font-size: 0.6rem;
-  letter-spacing: 1.5px;
-  text-transform: uppercase;
-  color: var(--moss);
-}
-
-.modal-steps { list-style: none; }
-.modal-steps li {
-  display: flex;
-  gap: 14px;
-  padding: 12px 0;
-  border-bottom: 1px solid rgba(100,150,80,0.1);
-  font-size: 0.9rem;
-  color: var(--ink);
-  align-items: flex-start;
-}
-
-.step-num {
-  width: 24px; height: 24px;
-  border-radius: 50%;
-  background: var(--forest);
-  color: var(--cream);
-  font-family: 'Space Mono', monospace;
-  font-size: 0.65rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  margin-top: 1px;
-}
-
-/* ── FOOTER ── */
-footer {
-  background: var(--charcoal);
-  color: rgba(200,210,195,0.6);
-  padding: 40px 60px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.footer-logo {
-  font-family: 'Archivo Black', sans-serif;
-  font-size: 1.2rem;
-  color: var(--sage-light);
-  letter-spacing: -0.5px;
-}
-
-.footer-note {
-  font-family: 'Space Mono', monospace;
-  font-size: 0.65rem;
-  letter-spacing: 1px;
-  text-align: right;
-}
-
-/* ── TOAST ── */
-.toast {
-  position: fixed;
-  bottom: 32px;
-  right: 32px;
-  background: var(--forest);
-  color: var(--cream);
-  padding: 14px 22px;
-  border-radius: 12px;
-  font-family: 'Archivo', sans-serif;
-  font-size: 0.875rem;
-  font-weight: 500;
-  z-index: 3000;
-  transform: translateY(80px);
-  opacity: 0;
-  transition: all 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  box-shadow: 0 8px 24px rgba(30,60,30,0.3);
-}
-
-.toast.show { transform: translateY(0); opacity: 1; }
-
-/* ── RESPONSIVE ── */
-@media (max-width: 900px) {
-  .hero { grid-template-columns: 1fr; padding: 100px 24px 40px; }
-  .hero-right { height: 340px; }
-  .stats-strip { grid-template-columns: 1fr 1fr; }
-  .section { padding: 60px 24px; }
-  .emissions-grid, .routes-grid, .tech-grid, .about-grid, .team-cards { grid-template-columns: 1fr; }
-  .search-row { grid-template-columns: 1fr; }
-  nav { padding: 0 20px; }
-  footer { flex-direction: column; gap: 16px; text-align: center; }
-}
-</style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SOMUS-26 · Movilidad Urbana Sostenible · CDMX</title>
+  <meta name="description" content="Sistema inteligente de optimización de movilidad para el Mundial 2026. Rutas multimodales, emisiones reales, datos en vivo." />
+
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Archivo+Black&family=Archivo:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link rel="stylesheet" href="assets/css/shared.css" />
+  <link rel="stylesheet" href="assets/css/main.css" />
 </head>
-<body>
+<body class="theme-light">
 
-<!-- NAV -->
-<nav>
-  <a href="#inicio" class="nav-logo">
-    SUMOS 26
-    <span class="logo-badge">CDMX · 2026</span>
-  </a>
-  <ul class="nav-links">
-    <li>
-      <a href="#">Rutas ▾</a>
-      <div class="dropdown-menu">
-        <a href="#rutas"><span class="dropdown-icon">🗺️</span> Mejores Rutas</a>
-        <a href="#" onclick="openModal('metro')"><span class="dropdown-icon">🚇</span> Metro + Trolebús</a>
-        <a href="#" onclick="openModal('bicicleta')"><span class="dropdown-icon">🚲</span> Ruta Bici (ECOBICI)</a>
-        <a href="#" onclick="openModal('mixta')"><span class="dropdown-icon">🔀</span> Ruta Mixta</a>
-      </div>
-    </li>
-    <li>
-      <a href="#">Análisis ▾</a>
-      <div class="dropdown-menu">
-        <a href="#emisiones"><span class="dropdown-icon">🌿</span> Emisiones en Tiempo Real</a>
-        <a href="#tecnologia"><span class="dropdown-icon">⚙️</span> Tecnología del Sistema</a>
-        <a href="#" onclick="showToast('Función disponible próximamente')"><span class="dropdown-icon">📊</span> Dashboard Operadores</a>
-      </div>
-    </li>
-    <li>
-      <a href="#">Info ▾</a>
-      <div class="dropdown-menu">
-        <a href="#acerca"><span class="dropdown-icon">👥</span> Acerca de SUMOS 26</a>
-        <a href="#" onclick="showToast('Abriendo documentación técnica...')"><span class="dropdown-icon">📄</span> Reporte Técnico</a>
-        <a href="#" onclick="showToast('ODS 3 · 7 · 11 · 13')"><span class="dropdown-icon">🌱</span> Objetivos de Sostenibilidad</a>
-      </div>
-    </li>
-    <li><a href="#inicio" class="nav-cta">▶ Planear Viaje</a></li>
-  </ul>
-</nav>
+  <!-- ═════ NAV ═════ -->
+  <nav class="nav">
+    <a href="index.html" class="nav-brand">
+      <span class="nav-brand-mark"></span>
+      SOMUS<span class="nav-brand-meta">26 · CDMX</span>
+    </a>
+    <div class="nav-links">
+      <a href="index.html" class="nav-link active">Planeador</a>
+      <a href="control.html" class="nav-link">Centro de Control</a>
+      <a href="pipeline.html" class="nav-link">Pipeline IA</a>
+      <a href="#about" class="nav-link">Equipo</a>
+    </div>
+  </nav>
 
-<!-- HERO -->
-<section class="hero" id="inicio">
-  <div class="hero-left">
-    <div class="hero-eyebrow">Sistema de Movilidad Sostenible · FIFA 2026</div>
-    <h1 class="hero-title">
-      Muévete
-      <span>diferente.</span>
-    </h1>
-    <p class="hero-subtitle">
-      SUMOS 26 optimiza tu trayecto hacia el estadio usando inteligencia artificial y datos en tiempo real. Reduce emisiones, evita el tráfico y llega más rápido.
-    </p>
+  <!-- ═════ HERO ═════ -->
+  <section class="hero" id="inicio">
+    <!-- Marca de números editoriales en el fondo -->
+    <div class="hero-numerals" aria-hidden="true">
+      <span class="hero-num">26</span>
+    </div>
 
-    <div class="search-panel">
-      <div class="search-row">
-        <div class="input-group">
-          <label>📍 Posición actual</label>
-          <input type="text" id="input-origin" placeholder="Ej: Polanco, CDMX" />
-        </div>
-        <div class="input-group">
-          <label>🏟️ Destino</label>
-          <input type="text" id="input-dest" placeholder="Ej: Estadio Azteca" />
+    <div class="hero-grid">
+      <div class="hero-content">
+        <div class="kicker fade-up">Mundial FIFA 2026 · CDMX</div>
+        <h1 class="display fade-up-1">
+          Muévete
+          <em>diferente.</em>
+        </h1>
+        <p class="lede fade-up-2">
+          SOMUS-26 optimiza tu trayecto al estadio combinando visión por computadora,
+          datos urbanos en vivo y factores reales de emisión. Reduce tu huella, evita
+          el caos, y descubre la ciudad por el camino.
+        </p>
+
+        <div class="hero-meta fade-up-3">
+          <div class="hero-meta-item">
+            <span class="kpi-label">Cámaras integradas</span>
+            <span class="hero-meta-val num">+2 400</span>
+          </div>
+          <div class="hero-meta-item">
+            <span class="kpi-label">Modos transporte</span>
+            <span class="hero-meta-val num">11</span>
+          </div>
+          <div class="hero-meta-item">
+            <span class="kpi-label">Aforo Mundial</span>
+            <span class="hero-meta-val num">5.4M</span>
+          </div>
         </div>
       </div>
-      <div class="search-row">
-        <div class="input-group">
-          <label>🕐 Hora de llegada</label>
-          <input type="time" id="input-time" value="18:00" />
-        </div>
-        <div class="input-group">
-          <label>🚌 Modo preferido</label>
-          <input type="text" id="input-mode" placeholder="Metro / Bus / Mixto" />
+
+      <!-- Mapa hero -->
+      <div class="hero-map-wrap fade-up-4">
+        <div class="map-card">
+          <div id="map-hero"></div>
+          <div class="map-overlay map-overlay-tl">
+            <span class="live-dot"></span>
+            <span class="mono">CDMX · EN VIVO</span>
+          </div>
+          <div class="map-overlay map-overlay-tr">
+            <button class="map-toggle active" data-layer="heatmap">Flujo</button>
+            <button class="map-toggle" data-layer="ecobici">ECOBICI</button>
+            <button class="map-toggle" data-layer="metro">Metro</button>
+          </div>
+          <div class="map-overlay map-overlay-bl">
+            <div class="map-legend">
+              <div class="legend-row"><span class="dot d1"></span> Bajo</div>
+              <div class="legend-row"><span class="dot d2"></span> Medio</div>
+              <div class="legend-row"><span class="dot d3"></span> Alto</div>
+              <div class="legend-row"><span class="dot d4"></span> Saturado</div>
+            </div>
+          </div>
         </div>
       </div>
-      <button class="btn-route" onclick="calcularRuta()">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-          <path d="M3 12h18M13 6l6 6-6 6"/>
-        </svg>
-        Calcular ruta óptima
-      </button>
+    </div>
+
+    <!-- Buscador flotante -->
+    <div class="search-panel fade-up-5">
+      <div class="search-fields">
+        <div class="input-group">
+          <label class="input-label">Origen</label>
+          <input class="input" id="i-origin" type="text" placeholder="Polanco, CDMX" value="Polanco, CDMX" />
+        </div>
+        <div class="search-arrow" aria-hidden="true">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <path d="M5 12h14M13 6l6 6-6 6" />
+          </svg>
+        </div>
+        <div class="input-group">
+          <label class="input-label">Destino</label>
+          <input class="input" id="i-dest" type="text" placeholder="Estadio Azteca" value="Estadio Azteca" />
+        </div>
+        <div class="input-group">
+          <label class="input-label">Llegada</label>
+          <input class="input" id="i-time" type="time" value="18:00" />
+        </div>
+        <div class="input-group">
+          <label class="input-label">Prioridad</label>
+          <select class="input" id="i-priority">
+            <option value="balanced">Balanceada</option>
+            <option value="fast">Más rápida</option>
+            <option value="green">Menor CO₂</option>
+            <option value="cheap">Más económica</option>
+          </select>
+        </div>
+        <button class="btn btn-primary btn-search" onclick="calcularRutas()">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 12h18M13 6l6 6-6 6"/></svg>
+          Calcular
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═════ TICKER LIVE ═════ -->
+  <div class="ticker">
+    <div class="ticker-track" id="ticker">
+      <!-- Inyectado por JS -->
     </div>
   </div>
 
-  <div class="hero-right">
-    <div class="map-card">
-      <div id="map"></div>
-      <div class="map-overlay-badge">
+  <!-- ═════ RESULTADOS DE RUTAS ═════ -->
+  <section class="section" id="rutas">
+    <div class="section-header">
+      <div>
+        <div class="kicker">Optimizador Multimodal</div>
+        <h2 class="h2">Tres rutas. <em style="color:var(--moss);font-style:normal">Una decisión.</em></h2>
+      </div>
+      <span class="pill">
         <span class="live-dot"></span>
-        EN VIVO — CDMX
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- STATS -->
-<div class="stats-strip">
-  <div class="stat-item">
-    <div class="stat-number">23%</div>
-    <div class="stat-label">Reducción de CO₂ proyectada</div>
-  </div>
-  <div class="stat-item">
-    <div class="stat-number">87K</div>
-    <div class="stat-label">Espectadores Estadio Azteca</div>
-  </div>
-  <div class="stat-item">
-    <div class="stat-number">25ms</div>
-    <div class="stat-label">Latencia de decisión IA</div>
-  </div>
-  <div class="stat-item">
-    <div class="stat-number">100%</div>
-    <div class="stat-label">Energía solar por nodo</div>
-  </div>
-</div>
-
-<!-- EMISIONES -->
-<section class="section" id="emisiones">
-  <div class="section-header">
-    <h2 class="section-title">Emisiones de<br>tu trayecto</h2>
-    <span class="section-tag">Análisis Ambiental</span>
-  </div>
-
-  <div class="emissions-grid">
-    <div class="chart-card">
-      <div class="chart-card-header">
-        <div class="chart-title">Viaje sin optimizar</div>
-        <span class="chart-badge badge-red">TRÁFICO NORMAL</span>
-      </div>
-      <div class="chart-canvas-wrap">
-        <canvas id="chartNormal"></canvas>
-      </div>
-    </div>
-    <div class="chart-card">
-      <div class="chart-card-header">
-        <div class="chart-title">Ruta SUMOS 26</div>
-        <span class="chart-badge badge-green">OPTIMIZADA</span>
-      </div>
-      <div class="chart-canvas-wrap">
-        <canvas id="chartOptimized"></canvas>
-      </div>
-    </div>
-  </div>
-
-  <div class="emission-summary">
-    <div class="summary-metric">
-      <div class="summary-value red-val">4.8×</div>
-      <div class="summary-label">Más CO₂ en Stop-and-Go</div>
-    </div>
-    <div class="summary-metric">
-      <div class="summary-value green-val">−340g</div>
-      <div class="summary-label">CO₂ ahorrado por trayecto</div>
-    </div>
-    <div class="summary-metric">
-      <div class="summary-value accent-val">8×</div>
-      <div class="summary-label">Más PM2.5 en congestión</div>
-    </div>
-  </div>
-</section>
-
-<!-- RUTAS -->
-<section class="section" id="rutas">
-  <div class="section-header">
-    <h2 class="section-title">Rutas<br>recomendadas</h2>
-    <span class="section-tag">Para Estadio Azteca</span>
-  </div>
-
-  <div class="routes-grid">
-    <div class="route-card r1" onclick="openRouteModal('metro')">
-      <div class="route-type">🥇 Recomendada · Menor huella</div>
-      <div class="route-name">Metro + Trolebús</div>
-      <div class="route-meta">
-        <div class="route-meta-row"><span class="meta-key">Tiempo estimado</span><span class="meta-val">42 min</span></div>
-        <div class="route-meta-row"><span class="meta-key">CO₂ emitido</span><span class="meta-val">120 g</span></div>
-        <div class="route-meta-row"><span class="meta-key">Costo aprox.</span><span class="meta-val">$8 MXN</span></div>
-        <div class="route-meta-row"><span class="meta-key">Confiabilidad</span><span class="meta-val">95%</span></div>
-      </div>
-      <div class="route-bar"><div class="route-fill"></div></div>
+        Cálculo en vivo
+      </span>
     </div>
 
-    <div class="route-card r2" onclick="openRouteModal('bicicleta')">
-      <div class="route-type">🚲 Sostenible · Sin emisiones</div>
-      <div class="route-name">ECOBICI + Metro</div>
-      <div class="route-meta">
-        <div class="route-meta-row"><span class="meta-key">Tiempo estimado</span><span class="meta-val">55 min</span></div>
-        <div class="route-meta-row"><span class="meta-key">CO₂ emitido</span><span class="meta-val">0 g</span></div>
-        <div class="route-meta-row"><span class="meta-key">Costo aprox.</span><span class="meta-val">$6 MXN</span></div>
-        <div class="route-meta-row"><span class="meta-key">Confiabilidad</span><span class="meta-val">88%</span></div>
-      </div>
-      <div class="route-bar"><div class="route-fill"></div></div>
+    <div class="routes-board grid-3" id="routes-board">
+      <!-- Inyectado dinámicamente -->
     </div>
 
-    <div class="route-card r3" onclick="openRouteModal('mixta')">
-      <div class="route-type">🚗 Rápida · Mayor impacto</div>
-      <div class="route-name">Vehículo Particular</div>
-      <div class="route-meta">
-        <div class="route-meta-row"><span class="meta-key">Tiempo estimado</span><span class="meta-val">75 min</span></div>
-        <div class="route-meta-row"><span class="meta-key">CO₂ emitido</span><span class="meta-val">460 g</span></div>
-        <div class="route-meta-row"><span class="meta-key">Costo aprox.</span><span class="meta-val">$180 MXN</span></div>
-        <div class="route-meta-row"><span class="meta-key">Confiabilidad</span><span class="meta-val">62%</span></div>
-      </div>
-      <div class="route-bar"><div class="route-fill"></div></div>
-    </div>
-  </div>
-</section>
-
-<!-- TECNOLOGÍA -->
-<section class="section" id="tecnologia">
-  <div class="section-header">
-    <h2 class="section-title">Tecnología<br>del sistema</h2>
-    <span class="section-tag">Arquitectura SUMOS 26</span>
-  </div>
-
-  <div class="tech-grid">
-    <div class="tech-card">
-      <span class="tech-icon">🧠</span>
-      <div class="tech-name">YOLO v11 — IA de visión</div>
-      <p class="tech-desc">Detecta y clasifica peatones, autobuses y vehículos en tiempo real. Asigna prioridad de semáforo por personas transportadas, no por número de autos.</p>
-      <span class="tech-spec">15–20 TOPS · Edge Computing</span>
-    </div>
-    <div class="tech-card">
-      <span class="tech-icon">📡</span>
-      <div class="tech-name">ROS2 — Red distribuida</div>
-      <p class="tech-desc">Cada nodo comparte su estado con vecinos mediante DDS. La red adapta el tráfico en corredores completos, sin servidor central.</p>
-      <span class="tech-spec">Latencia &lt; 25ms · PREEMPT_RT</span>
-    </div>
-    <div class="tech-card">
-      <span class="tech-icon">📷</span>
-      <div class="tech-name">Cámaras 4K + LiDAR</div>
-      <p class="tech-desc">Visión gran angular (120°) a 60fps en alta densidad. LiDAR opera bajo lluvia, niebla o noche total para conteo volumétrico continuo.</p>
-      <span class="tech-spec">IP67 · 0.1° resolución angular</span>
-    </div>
-    <div class="tech-card">
-      <span class="tech-icon">🌱</span>
-      <div class="tech-name">Panel Solar + LiFePO4</div>
-      <p class="tech-desc">200W fotovoltaico por nodo. Batería de 400Wh con >3,000 ciclos. Autonomía nocturna de 8+ horas. Cero dependencia de la red eléctrica.</p>
-      <span class="tech-spec">100% renovable · 45W consumo</span>
-    </div>
-    <div class="tech-card">
-      <span class="tech-icon">🚦</span>
-      <div class="tech-name">Control Semafórico NTCIP</div>
-      <p class="tech-desc">Se integra a semáforos existentes sin reemplazarlos. En modo evento masivo, pre-computa el estado óptimo minuto a minuto.</p>
-      <span class="tech-spec">NTCIP 1202 · Plug &amp; Play</span>
-    </div>
-    <div class="tech-card">
-      <span class="tech-icon">💨</span>
-      <div class="tech-name">Sensores Ambientales</div>
-      <p class="tech-desc">Monitoreo continuo de CO₂ (±30 ppm), PM2.5, PM10, temperatura y ruido. Alerta cuando se superan umbrales NOM-025-SSA1-2021.</p>
-      <span class="tech-spec">400–5000 ppm · 0–500 μg/m³</span>
-    </div>
-  </div>
-</section>
-
-<!-- ACERCA DE -->
-<section class="section" id="acerca">
-  <div class="section-header">
-    <h2 class="section-title">Acerca de<br>SUMOS 26</h2>
-    <span class="section-tag">El Equipo</span>
-  </div>
-
-  <div class="about-grid">
-    <div class="about-text">
-      <p>
-        <strong>SUMOS 26</strong> es un proyecto de ingeniería mecatrónica de la Universidad Iberoamericana, diseñado como respuesta tecnológica a los retos de movilidad, seguridad civil y sostenibilidad ambiental que plantea la <strong>Copa Mundial FIFA 2026</strong> en México.
-      </p>
-      <p>
-        El sistema implementa una red de nodos de decisión descentralizados con visión computacional e IA, capaces de optimizar en tiempo real el flujo vehicular y peatonal alrededor del Estadio Azteca, reduciendo un <strong>23% las emisiones de CO₂</strong> respecto al escenario base.
-      </p>
-      <p>
-        Más allá del torneo, la arquitectura desarrollada tiene potencial de transferencia a cualquier ciudad que busque una gestión de tráfico <strong>sostenible, escalable y resiliente</strong>.
-      </p>
-      <div class="ods-chips">
-        <span class="ods-chip">ODS 3 — Salud y Bienestar</span>
-        <span class="ods-chip">ODS 7 — Energía Limpia</span>
-        <span class="ods-chip">ODS 11 — Ciudades Sostenibles</span>
-        <span class="ods-chip">ODS 13 — Acción Climática</span>
-      </div>
-    </div>
-
-    <div>
-      <div class="team-cards">
-        <div class="team-card">
-          <div class="team-avatar">DC</div>
-          <div class="team-name">Daniel Orlando Camacho Campos</div>
-          <div class="team-role">Ingeniería Mecatrónica · UIA</div>
+    <div class="route-detail card" id="route-detail" style="margin-top: 32px;">
+      <div class="card-header">
+        <div>
+          <div class="kicker no-line">Detalle</div>
+          <h3 class="card-title">Selecciona una ruta para ver desglose</h3>
         </div>
-        <div class="team-card">
-          <div class="team-avatar">VP</div>
-          <div class="team-name">Víctor Alejandro Palacios Castillo</div>
-          <div class="team-role">Ingeniería Mecatrónica · UIA</div>
+      </div>
+      <div id="route-detail-body" class="route-detail-empty">
+        <p class="text-mute">Las tres opciones se calculan con factores de emisión SEMARNAT 2023, distancias reales y tiempos típicos por modo en CDMX.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═════ HUELLA AMBIENTAL ═════ -->
+  <section class="section section-emissions" id="emisiones">
+    <div class="section-header">
+      <div>
+        <div class="kicker">Impacto Ambiental</div>
+        <h2 class="h2">Cada gramo cuenta.</h2>
+      </div>
+      <span class="pill pill-success">
+        <span class="live-dot"></span>
+        Factores SEMARNAT 2023
+      </span>
+    </div>
+
+    <div class="emissions-layout">
+      <div class="card emissions-chart-card">
+        <div class="card-header">
+          <div>
+            <div class="kicker no-line">Ruta seleccionada</div>
+            <h3 class="card-title" id="em-route-title">Ruta multimodal sugerida</h3>
+          </div>
+          <span class="pill pill-success" id="em-route-badge">−68% CO₂</span>
         </div>
-        <div class="institution-block">
+        <div class="chart-canvas-wrap">
+          <canvas id="chart-emissions"></canvas>
+        </div>
+      </div>
+
+      <div class="emissions-side">
+        <div class="card card-tight emissions-summary-card">
+          <div class="kpi" style="margin-bottom: 16px;">
+            <span class="kpi-label">CO₂ evitado vs auto</span>
+            <span class="kpi-value green" id="em-saved">0 g</span>
+            <span class="kpi-trend up">Equivale a sembrar <span id="em-trees">1</span> árbol/mes</span>
+          </div>
+          <hr style="border: none; border-top: 1px solid var(--border); margin: 16px 0;" />
+          <div class="kpi">
+            <span class="kpi-label">PM2.5 evitado</span>
+            <span class="kpi-value" id="em-pm25">0 mg</span>
+            <span class="kpi-trend up">Mejor calidad respiratoria</span>
+          </div>
+        </div>
+
+        <div class="card card-tight">
+          <div class="card-header">
+            <h3 class="card-title">Factor por modo</h3>
+            <span class="mono text-mute" style="font-size: 0.65rem;">kgCO₂/km · pasajero</span>
+          </div>
+          <div class="factor-list" id="factor-list"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═════ POIs CERCANOS ═════ -->
+  <section class="section" id="poi">
+    <div class="section-header">
+      <div>
+        <div class="kicker">Tu ciudad</div>
+        <h2 class="h2">Lo que encuentras<br/><em style="color:var(--moss);font-style:normal">en el camino.</em></h2>
+      </div>
+      <span class="pill">OpenStreetMap · Overpass</span>
+    </div>
+
+    <div class="poi-grid grid-4" id="poi-grid">
+      <!-- Inyectado por JS -->
+    </div>
+  </section>
+
+  <!-- ═════ TECNOLOGÍA ═════ -->
+  <section class="section section-tech" id="tecnologia">
+    <div class="section-header">
+      <div>
+        <div class="kicker">Tecnología detrás</div>
+        <h2 class="h2">Stack ingenieril.</h2>
+      </div>
+      <a href="pipeline.html" class="btn btn-ghost">
+        Ver pipeline completo
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+      </a>
+    </div>
+
+    <div class="grid-3">
+      <article class="tech-card card">
+        <span class="tech-icon-wrap">⚙</span>
+        <h3 class="h3">Visión por Computadora</h3>
+        <p class="text-dim">YOLOv8 sobre flujo CCTV procesa hasta 30 FPS en edge con Raspberry Pi 5. Cuantización INT8 para tiempo real.</p>
+        <div class="tech-stack-row">
+          <span class="tech-chip">YOLOv8</span>
+          <span class="tech-chip">ONNX</span>
+          <span class="tech-chip">OpenCV</span>
+        </div>
+      </article>
+      <article class="tech-card card">
+        <span class="tech-icon-wrap">⌬</span>
+        <h3 class="h3">Procesamiento Edge</h3>
+        <p class="text-dim">Cómputo distribuido en Raspberry Pi 5 con módulo NPU. Telemetría agregada vía MQTT, latencia &lt;120ms.</p>
+        <div class="tech-stack-row">
+          <span class="tech-chip">Raspberry Pi 5</span>
+          <span class="tech-chip">MQTT</span>
+          <span class="tech-chip">ROS2</span>
+        </div>
+      </article>
+      <article class="tech-card card">
+        <span class="tech-icon-wrap">≋</span>
+        <h3 class="h3">Datos en Vivo</h3>
+        <p class="text-dim">Integración con ECOBICI (GBFS), SIMAT (calidad del aire), Datos Abiertos CDMX y OSM Overpass para POIs.</p>
+        <div class="tech-stack-row">
+          <span class="tech-chip">GBFS</span>
+          <span class="tech-chip">REST</span>
+          <span class="tech-chip">Overpass</span>
+        </div>
+      </article>
+    </div>
+  </section>
+
+  <!-- ═════ ABOUT ═════ -->
+  <section class="section section-about" id="about">
+    <div class="section-header">
+      <div>
+        <div class="kicker">Equipo SOMUS-26</div>
+        <h2 class="h2">Mecatrónica con propósito.</h2>
+      </div>
+      <span class="pill">Universidad Iberoamericana CDMX</span>
+    </div>
+
+    <div class="about-grid">
+      <div class="about-text">
+        <p class="lede">
+          SOMUS-26 nace en el curso de <strong>Tecnologías para el Desarrollo Sostenible</strong>
+          como una respuesta de ingeniería al reto logístico del Mundial FIFA 2026 en
+          Ciudad de México.
+        </p>
+        <p>
+          El sistema combina percepción visual con IA, datos urbanos abiertos y
+          modelos de impacto ambiental para ofrecer al ciudadano y al operador
+          público herramientas de decisión en tiempo real.
+        </p>
+
+        <div class="ods-row">
+          <span class="ods-label kicker no-line">Objetivos de Desarrollo Sostenible</span>
+          <div class="ods-chips" id="ods-chips"></div>
+        </div>
+      </div>
+
+      <div class="team-grid">
+        <div class="team-card card">
+          <div class="team-avatar" style="background: var(--forest); color: var(--cream);">DC</div>
+          <div class="team-name">Daniel Orlando<br/>Camacho Campos</div>
+          <div class="team-role">Lead · IA & Visión</div>
+        </div>
+        <div class="team-card card">
+          <div class="team-avatar" style="background: var(--moss); color: var(--cream);">VA</div>
+          <div class="team-name">Víctor<br/>(Frontend Lead)</div>
+          <div class="team-role">Lead · Frontend & UX</div>
+        </div>
+        <div class="institution-block card">
           <div>
             <div class="inst-name">Universidad Iberoamericana</div>
-            <div class="inst-detail">INGENIERÍA MECATRÓNICA · CDMX</div>
+            <div class="kicker no-line">Ciudad de México · 2026</div>
           </div>
-          <div class="professor-tag">
-            <div class="prof-label">Profesora</div>
-            <div class="prof-name">Georgina Paredes</div>
+          <div class="prof-tag">
+            <div class="kicker no-line">Asesoría</div>
+            <div class="prof-name">Prof. Georgina Paredes</div>
           </div>
         </div>
       </div>
     </div>
-  </div>
-</section>
+  </section>
 
-<!-- FOOTER -->
-<footer>
-  <div>
-    <div class="footer-logo">SUMOS 26</div>
-    <div style="font-family:'Space Mono',monospace;font-size:0.6rem;letter-spacing:1px;margin-top:6px;">Sistema de Optimización de Movilidad Urbana Sostenible</div>
-  </div>
-  <div class="footer-note">
-    Universidad Iberoamericana · Ingeniería Mecatrónica<br>
-    Tecnologías para el Desarrollo Sostenible · 2026
-  </div>
-</footer>
-
-<!-- MODAL -->
-<div class="modal-overlay" id="modal-overlay" onclick="closeModal(event)">
-  <div class="modal" id="modal-content">
-    <button class="modal-close" onclick="document.getElementById('modal-overlay').classList.remove('open')">✕</button>
-    <div id="modal-body"></div>
-  </div>
-</div>
-
-<!-- TOAST -->
-<div class="toast" id="toast"></div>
-
-<script>
-// ── MAP INIT ──
-const map = L.map('map', { zoomControl: false }).setView([19.3032, -99.1505], 13);
-
-L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-  attribution: '© OpenStreetMap © CARTO',
-  maxZoom: 19
-}).addTo(map);
-
-L.control.zoom({ position: 'bottomright' }).addTo(map);
-
-// Custom markers
-const aztecaIcon = L.divIcon({
-  className: '',
-  html: `<div style="background:#2d5a3d;color:#f5f0e8;border-radius:50%;width:40px;height:40px;display:flex;align-items:center;justify-content:center;font-size:1.2rem;border:3px solid #f5f0e8;box-shadow:0 4px 12px rgba(0,0,0,0.3)">🏟️</div>`,
-  iconSize: [40,40], iconAnchor: [20,20]
-});
-
-const stationIcon = L.divIcon({
-  className: '',
-  html: `<div style="background:#4a7c59;color:white;border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-size:0.7rem;border:2px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.2)">M</div>`,
-  iconSize: [28,28], iconAnchor: [14,14]
-});
-
-L.marker([19.3032, -99.1505], {icon: aztecaIcon}).addTo(map)
-  .bindPopup('<strong>Estadio Azteca</strong><br>Sede FIFA 2026<br>Capacidad: 87,000');
-
-const stations = [
-  [19.3290, -99.1410, "Metro Tasqueña"],
-  [19.3540, -99.1620, "Metro Xola"],
-  [19.3450, -99.1900, "Metro Mixcoac"],
-  [19.3680, -99.1380, "Metro Ermita"]
-];
-
-stations.forEach(([lat, lng, name]) => {
-  L.marker([lat, lng], {icon: stationIcon}).addTo(map)
-    .bindPopup(`<strong>${name}</strong><br>Conexión disponible`);
-});
-
-// Ruta verde (Metro)
-const routeCoords = [
-  [19.3540, -99.1620],
-  [19.3450, -99.1500],
-  [19.3350, -99.1550],
-  [19.3200, -99.1520],
-  [19.3032, -99.1505]
-];
-
-L.polyline(routeCoords, {
-  color: '#2d5a3d', weight: 5, opacity: 0.85, dashArray: null
-}).addTo(map).bindPopup('🥇 Ruta SUMOS 26 recomendada — Metro + Trolebús');
-
-L.polyline([[19.3290, -99.1410],[19.3150, -99.1460],[19.3032, -99.1505]], {
-  color: '#e8a020', weight: 3, opacity: 0.6, dashArray: '10,6'
-}).addTo(map).bindPopup('🚲 Ruta alternativa — ECOBICI');
-
-// ── CHARTS ──
-const labels = ['CO₂ (g/km)', 'PM2.5 (μg)', 'NOx (mg)', 'Ruido (dB)'];
-const normalData = [480, 95, 280, 82];
-const optData   = [120, 18, 64, 61];
-
-const sharedOpts = {
-  responsive: true,
-  maintainAspectRatio: false,
-  plugins: { legend: { display: false } },
-  scales: {
-    x: { grid: { color: 'rgba(100,150,80,0.1)' }, ticks: { font: { family: 'Space Mono', size: 9 }, color: '#7a9a72' } },
-    y: { grid: { color: 'rgba(100,150,80,0.1)' }, ticks: { font: { family: 'Space Mono', size: 9 }, color: '#7a9a72' } }
-  },
-  animation: { duration: 1200, easing: 'easeOutQuart' }
-};
-
-new Chart(document.getElementById('chartNormal'), {
-  type: 'bar',
-  data: {
-    labels,
-    datasets: [{
-      data: normalData,
-      backgroundColor: ['rgba(196,75,43,0.7)', 'rgba(196,75,43,0.5)', 'rgba(196,75,43,0.6)', 'rgba(196,75,43,0.4)'],
-      borderColor: 'rgba(196,75,43,0.9)',
-      borderWidth: 2,
-      borderRadius: 6
-    }]
-  },
-  options: { ...sharedOpts }
-});
-
-new Chart(document.getElementById('chartOptimized'), {
-  type: 'bar',
-  data: {
-    labels,
-    datasets: [{
-      data: optData,
-      backgroundColor: ['rgba(45,90,61,0.7)', 'rgba(45,90,61,0.5)', 'rgba(45,90,61,0.6)', 'rgba(45,90,61,0.4)'],
-      borderColor: 'rgba(45,90,61,0.9)',
-      borderWidth: 2,
-      borderRadius: 6
-    }]
-  },
-  options: { ...sharedOpts }
-});
-
-// ── ROUTE CALC ──
-function calcularRuta() {
-  const origin = document.getElementById('input-origin').value;
-  const dest = document.getElementById('input-dest').value;
-  if (!origin || !dest) { showToast('⚠️ Ingresa tu posición y destino'); return; }
-  showToast('✅ Ruta calculada — Metro Tasqueña → Estadio Azteca');
-  map.flyTo([19.3250, -99.1505], 14, { duration: 1.5 });
-  document.getElementById('rutas').scrollIntoView({ behavior: 'smooth' });
-}
-
-// ── MODAL ──
-const routeData = {
-  metro: {
-    title: 'Metro + Trolebús',
-    tag: 'Ruta Recomendada',
-    time: '42 min', co2: '120 g', cost: '$8 MXN', score: '95%',
-    steps: [
-      'Toma el Metro Línea 2 desde tu estación más cercana',
-      'Transbordo en Tasqueña (Línea 2 → Trolebús Sur)',
-      'Trolebús hasta Estadio Azteca (Calzada del Hueso)',
-      'Acceso peatonal norte del estadio — 5 min caminando'
-    ]
-  },
-  bicicleta: {
-    title: 'ECOBICI + Metro',
-    tag: 'Ruta Sin Emisiones',
-    time: '55 min', co2: '0 g', cost: '$6 MXN', score: '88%',
-    steps: [
-      'Toma una bicicleta ECOBICI en la estación más cercana',
-      'Ciclovía Insurgentes Sur → Metro Mixcoac',
-      'Metro Línea 7 hasta Barranca del Muerto',
-      'Transbordo Línea 3 → Tasqueña, luego Trolebús al Azteca'
-    ]
-  },
-  mixta: {
-    title: 'Vehículo Particular',
-    tag: 'Mayor Impacto Ambiental',
-    time: '75 min', co2: '460 g', cost: '$180 MXN', score: '62%',
-    steps: [
-      'Periférico Sur dirección sur hasta Viaducto Tlalpan',
-      'Calzada de Tlalpan hasta Estadio Azteca',
-      'Estacionamiento disponible en Lote C (capacidad limitada)',
-      '⚠️ Congestión post-partido estimada: 45–90 min adicionales'
-    ]
-  }
-};
-
-function openRouteModal(key) {
-  openModal(key);
-}
-
-function openModal(key) {
-  if (!routeData[key]) return;
-  const d = routeData[key];
-  document.getElementById('modal-body').innerHTML = `
-    <div class="modal-sub">${d.tag}</div>
-    <div class="modal-title">${d.title}</div>
-    <div class="modal-route-info">
-      <div class="modal-metric"><div class="modal-metric-val">${d.time}</div><div class="modal-metric-key">Tiempo estimado</div></div>
-      <div class="modal-metric"><div class="modal-metric-val">${d.co2}</div><div class="modal-metric-key">CO₂ por trayecto</div></div>
-      <div class="modal-metric"><div class="modal-metric-val">${d.cost}</div><div class="modal-metric-key">Costo aproximado</div></div>
-      <div class="modal-metric"><div class="modal-metric-val">${d.score}</div><div class="modal-metric-key">Confiabilidad</div></div>
+  <!-- ═════ FOOTER ═════ -->
+  <footer class="foot">
+    <div class="foot-brand">
+      <h3>SOMUS-26</h3>
+      <p>Sistema de Optimización de Movilidad Urbana Sostenible.<br/>Universidad Iberoamericana · CDMX 2026.</p>
     </div>
-    <ul class="modal-steps">
-      ${d.steps.map((s,i)=>`<li><span class="step-num">${i+1}</span>${s}</li>`).join('')}
-    </ul>
-  `;
-  document.getElementById('modal-overlay').classList.add('open');
-}
+    <div class="foot-col">
+      <h4>Sistema</h4>
+      <a href="index.html">Planeador</a>
+      <a href="control.html">Centro de Control</a>
+      <a href="pipeline.html">Pipeline IA</a>
+    </div>
+    <div class="foot-col">
+      <h4>Datos</h4>
+      <a href="https://gbfs.mex.lyftbikes.com" target="_blank">ECOBICI GBFS</a>
+      <a href="https://aire.cdmx.gob.mx" target="_blank">SIMAT</a>
+      <a href="https://datos.cdmx.gob.mx" target="_blank">Datos Abiertos</a>
+    </div>
+    <div class="foot-col">
+      <h4>Académico</h4>
+      <a href="#about">Equipo</a>
+      <a href="#" onclick="showToast('Reporte técnico en preparación'); return false;">Reporte técnico</a>
+      <a href="#" onclick="showToast('ODS 3, 7, 9, 10, 11, 13'); return false;">ODS</a>
+    </div>
+    <div class="foot-bottom">
+      <span>SOMUS · 2026</span>
+      <span>Construido en CDMX · GitHub Pages</span>
+    </div>
+  </footer>
 
-function closeModal(e) {
-  if (e.target === document.getElementById('modal-overlay'))
-    document.getElementById('modal-overlay').classList.remove('open');
-}
-
-// ── TOAST ──
-function showToast(msg) {
-  const t = document.getElementById('toast');
-  t.textContent = msg;
-  t.classList.add('show');
-  setTimeout(() => t.classList.remove('show'), 3000);
-}
-</script>
+  <!-- Scripts -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+  <script src="assets/js/data.js"></script>
+  <script src="assets/js/main.js"></script>
 </body>
 </html>
