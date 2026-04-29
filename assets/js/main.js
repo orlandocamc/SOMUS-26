@@ -11,9 +11,13 @@
 
 let mapHero;
 let layerHeatmap, layerEcobici, layerMetro;
+let layerRoutes;            // grupo de capas para polilíneas de rutas
+let routePolylines = {};    // { r1: polyline, r2: polyline, r3: polyline }
+let originMarker, destMarker;
 let chartEmissions;
 let routesData = [];
 let selectedRouteId = null;
+let isCalculating = false;
 
 // ── Tile layer minimal (CartoDB Positron-like) ─────────
 const TILE_CARTO = 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png';
@@ -25,8 +29,7 @@ document.addEventListener('DOMContentLoaded', () => {
   initMapToggles();
   renderFactorList();
   renderODS();
-  renderPOIs();
-  // Cálculo inicial al cargar
+  // Cálculo inicial al cargar (también dispara loadDynamicPOIs)
   calcularRutas();
 });
 
@@ -145,88 +148,231 @@ function initTicker() {
   document.getElementById('ticker').innerHTML = html;
 }
 
-/* ═════ OPTIMIZADOR DE RUTAS ═════ */
-function calcularRutas() {
-  const origin = document.getElementById('i-origin').value || 'Polanco';
-  const dest = document.getElementById('i-dest').value || 'Estadio Azteca';
-  const time = document.getElementById('i-time').value;
-  const priority = document.getElementById('i-priority').value;
+/* ═════ OPTIMIZADOR DE RUTAS REAL (ORS + Nominatim) ═════ */
+async function calcularRutas() {
+  if (isCalculating) return;
+  isCalculating = true;
+  setSearchLoading(true);
 
-  // Distancia estimada (ej: Polanco -> Azteca son ~21km)
-  let distance = 21.0;
-  // Heurística simple: si origen contiene "Centro" usar 18km, "Polanco" 21km, default 15km
-  const o = origin.toLowerCase();
-  if (o.includes('centro')) distance = 18;
-  else if (o.includes('polanco')) distance = 21;
-  else if (o.includes('roma')) distance = 17;
-  else if (o.includes('coyoacán') || o.includes('coyoacan')) distance = 8;
-  else if (o.includes('tlalpan')) distance = 6;
-  else distance = 15;
+  const originStr = document.getElementById('i-origin').value || 'Polanco, CDMX';
+  const destStr   = document.getElementById('i-dest').value   || 'Estadio Azteca';
+  const priority  = document.getElementById('i-priority').value;
 
-  // Generar 3 rutas
-  routesData = [
-    {
-      id: 'r1',
-      name: 'Multimodal Verde',
-      tag: 'Recomendada',
-      modes: [
-        { mode: 'walk',    label: 'A pie',    icon: '🚶', km: 0.6 },
-        { mode: 'metro',   label: 'Metro',    icon: '🚇', km: distance * 0.55 },
-        { mode: 'metrobus',label: 'Metrobús', icon: '🚍', km: distance * 0.30 },
-        { mode: 'walk',    label: 'A pie',    icon: '🚶', km: 0.5 }
-      ],
-      time: Math.round(distance * 2.4 + 8),
-      cost: 12,
-      transfers: 2,
-      reliability: 92
-    },
-    {
-      id: 'r2',
-      name: 'ECOBICI + Metro',
-      tag: 'Más activa',
-      modes: [
-        { mode: 'walk',   label: 'A pie',    icon: '🚶', km: 0.3 },
-        { mode: 'ecobici',label: 'ECOBICI',  icon: '🚲', km: distance * 0.35 },
-        { mode: 'metro',  label: 'Metro',    icon: '🚇', km: distance * 0.50 },
-        { mode: 'walk',   label: 'A pie',    icon: '🚶', km: 0.7 }
-      ],
-      time: Math.round(distance * 2.8 + 10),
-      cost: 9,
-      transfers: 2,
-      reliability: 78
-    },
-    {
-      id: 'r3',
-      name: 'Auto Compartido',
-      tag: 'Más rápida',
-      modes: [
-        { mode: 'car_pooled', label: 'Auto', icon: '🚙', km: distance }
-      ],
-      time: Math.round(distance * 1.8 + 5),
-      cost: 95,
-      transfers: 0,
-      reliability: 65
-    }
-  ];
+  try {
+    // 1. Geocoding paralelo
+    const [origin, dest] = await Promise.all([geocode(originStr), geocode(destStr)]);
 
-  // Calcular CO2 total para cada ruta
-  routesData.forEach(r => {
-    r.co2 = r.modes.reduce((acc, m) => acc + calculateCO2(m.km, m.mode), 0);
-    r.distance = r.modes.reduce((acc, m) => acc + m.km, 0);
-    r.saving = +(SOMUS_DATA.emissionFactors.car_gasoline.co2 * r.distance - r.co2).toFixed(2);
+    // 2. Calcular 3 rutas en paralelo (3 perfiles ORS)
+    const driveCoords = [[origin.lat, origin.lng], [dest.lat, dest.lng]];
+    const [routeDrive, routeBike, routeWalk] = await Promise.all([
+      getRoute(driveCoords, 'driving-car'),
+      getRoute(driveCoords, 'cycling-regular'),
+      getRoute(driveCoords, 'foot-walking')
+    ]);
+
+    // Distancia base en km
+    const distanceKm = (routeDrive?.distance_m || 15000) / 1000;
+
+    // 3. Construir las 3 rutas multimodales con datos reales
+    const oMetro = nearestMetro(origin.lat, origin.lng);
+    const dMetro = nearestMetro(dest.lat, dest.lng);
+    const oEco   = nearestEcobici(origin.lat, origin.lng, true);
+    const dEco   = nearestEcobici(dest.lat, dest.lng, false);
+
+    // Distancia de caminata para tramos peatonales
+    const walkOriginKm = oMetro.distance_km;
+    const walkDestKm   = dMetro.distance_km;
+    const metroDistKm  = haversine(oMetro.lat, oMetro.lng, dMetro.lat, dMetro.lng);
+    const totalMultimodalKm = walkOriginKm + metroDistKm + walkDestKm;
+
+    routesData = [
+      {
+        id: 'r1',
+        name: 'Multimodal Verde',
+        tag: 'Recomendada',
+        modes: [
+          { mode: 'walk',     label: 'A pie',    icon: '🚶', km: walkOriginKm },
+          { mode: 'metro',    label: 'Metro',    icon: '🚇', km: metroDistKm * 0.65 },
+          { mode: 'metrobus', label: 'Metrobús', icon: '🚍', km: metroDistKm * 0.35 },
+          { mode: 'walk',     label: 'A pie',    icon: '🚶', km: walkDestKm }
+        ],
+        time: Math.round(walkOriginKm * 12 + metroDistKm * 1.7 + walkDestKm * 12 + 8),
+        cost: 12,
+        transfers: 2,
+        reliability: 92,
+        // Geometría: usamos la del routing driving (proxy razonable, real)
+        geometry: routeDrive?.coords || driveCoords,
+        _distance_real_km: totalMultimodalKm
+      },
+      {
+        id: 'r2',
+        name: 'ECOBICI + Metro',
+        tag: 'Más activa',
+        modes: [
+          { mode: 'walk',    label: 'A pie',   icon: '🚶', km: 0.3 },
+          { mode: 'ecobici', label: 'ECOBICI', icon: '🚲', km: (routeBike?.distance_m || distanceKm * 1000) / 1000 * 0.4 },
+          { mode: 'metro',   label: 'Metro',   icon: '🚇', km: metroDistKm * 0.5 },
+          { mode: 'walk',    label: 'A pie',   icon: '🚶', km: 0.5 }
+        ],
+        time: Math.round(((routeBike?.duration_s || distanceKm * 200) / 60) + 12),
+        cost: 9,
+        transfers: 2,
+        reliability: 78,
+        geometry: routeBike?.coords || driveCoords,
+        _distance_real_km: (routeBike?.distance_m || distanceKm * 1000) / 1000
+      },
+      {
+        id: 'r3',
+        name: 'Auto Compartido',
+        tag: 'Más rápida',
+        modes: [
+          { mode: 'car_pooled', label: 'Auto', icon: '🚙', km: distanceKm }
+        ],
+        // Tiempo de ORS × 1.4 por tráfico CDMX hora pico
+        time: Math.round(((routeDrive?.duration_s || distanceKm * 90) / 60) * 1.4 + 5),
+        cost: Math.round(distanceKm * 4.5),
+        transfers: 0,
+        reliability: 65,
+        geometry: routeDrive?.coords || driveCoords,
+        _distance_real_km: distanceKm
+      }
+    ];
+
+    // Calcular CO2 total para cada ruta
+    routesData.forEach(r => {
+      r.co2 = r.modes.reduce((acc, m) => acc + calculateCO2(m.km, m.mode), 0);
+      r.distance = r._distance_real_km;
+      r.saving = +(SOMUS_DATA.emissionFactors.car_gasoline.co2 * r.distance - r.co2).toFixed(2);
+    });
+
+    // Reordenar según prioridad
+    if (priority === 'fast') routesData.sort((a, b) => a.time - b.time);
+    else if (priority === 'green') routesData.sort((a, b) => a.co2 - b.co2);
+    else if (priority === 'cheap') routesData.sort((a, b) => a.cost - b.cost);
+    else routesData.sort((a, b) => (a.time/60 + a.co2*5 + a.cost/30) - (b.time/60 + b.co2*5 + b.cost/30));
+
+    // Render
+    renderRoutes();
+    drawRoutesOnMap(origin, dest);
+    selectRoute(routesData[0].id);
+
+    // POIs reales basados en la ruta seleccionada (la primera, recomendada)
+    loadDynamicPOIs(routesData[0].geometry);
+
+    // Indicador en el mapa
+    showToast(`Rutas calculadas: ${origin.name} → ${dest.name}`);
+  } catch (e) {
+    console.error('Error calculando rutas:', e);
+    showToast('Error al calcular rutas. Revisa origen y destino.');
+  } finally {
+    isCalculating = false;
+    setSearchLoading(false);
+  }
+}
+
+function setSearchLoading(loading) {
+  const btn = document.querySelector('.btn-search');
+  if (!btn) return;
+  if (loading) {
+    btn.dataset.original = btn.innerHTML;
+    btn.innerHTML = '<span class="spinner-mini"></span> Calculando...';
+    btn.disabled = true;
+  } else {
+    if (btn.dataset.original) btn.innerHTML = btn.dataset.original;
+    btn.disabled = false;
+  }
+}
+
+/* ═════ DIBUJAR POLILÍNEAS EN EL MAPA ═════ */
+function drawRoutesOnMap(origin, dest) {
+  // Limpiar capas previas
+  if (layerRoutes) mapHero.removeLayer(layerRoutes);
+  if (originMarker) mapHero.removeLayer(originMarker);
+  if (destMarker) mapHero.removeLayer(destMarker);
+
+  layerRoutes = L.layerGroup();
+  routePolylines = {};
+
+  const colors = { r1: '#2d5a3d', r2: '#e8a020', r3: '#c44b2b' };
+
+  routesData.forEach((r, idx) => {
+    const id = `r${idx + 1}`;
+    if (!r.geometry || r.geometry.length < 2) return;
+
+    // Línea outline blanca para legibilidad
+    const outline = L.polyline(r.geometry, {
+      color: '#ffffff',
+      weight: 7,
+      opacity: 0.85,
+      lineCap: 'round',
+      lineJoin: 'round'
+    });
+
+    // Línea principal del color de la ruta
+    const main = L.polyline(r.geometry, {
+      color: colors[id],
+      weight: 4,
+      opacity: idx === 0 ? 1 : 0.55,
+      lineCap: 'round',
+      lineJoin: 'round',
+      dashArray: idx === 0 ? null : '6 8'
+    });
+
+    main.on('click', () => selectRoute(r.id));
+
+    layerRoutes.addLayer(outline);
+    layerRoutes.addLayer(main);
+    routePolylines[id] = { outline, main };
   });
 
-  // Reordenar según prioridad
-  if (priority === 'fast') routesData.sort((a, b) => a.time - b.time);
-  else if (priority === 'green') routesData.sort((a, b) => a.co2 - b.co2);
-  else if (priority === 'cheap') routesData.sort((a, b) => a.cost - b.cost);
-  else routesData.sort((a, b) => (a.time/60 + a.co2*5 + a.cost/30) - (b.time/60 + b.co2*5 + b.cost/30));
+  // Marcadores origen/destino
+  originMarker = L.marker([origin.lat, origin.lng], {
+    icon: L.divIcon({
+      className: '',
+      html: `<div style="background:#2d5a3d;color:#fff;width:28px;height:28px;border-radius:50%;display:grid;place-items:center;border:3px solid #f5f0e8;font-family:'Archivo Black';font-size:0.65rem;box-shadow:0 4px 12px rgba(0,0,0,0.3);">A</div>`,
+      iconSize: [28, 28],
+      iconAnchor: [14, 14]
+    })
+  }).addTo(mapHero).bindPopup(`<strong>Origen:</strong> ${origin.name}`);
 
-  // Reasignar clases r1, r2, r3 según orden
-  routesData = routesData.map((r, idx) => ({ ...r, _classIdx: idx + 1 }));
+  destMarker = L.marker([dest.lat, dest.lng], {
+    icon: L.divIcon({
+      className: '',
+      html: `<div style="background:#c44b2b;color:#fff;width:28px;height:28px;border-radius:50%;display:grid;place-items:center;border:3px solid #f5f0e8;font-family:'Archivo Black';font-size:0.65rem;box-shadow:0 4px 12px rgba(0,0,0,0.3);">B</div>`,
+      iconSize: [28, 28],
+      iconAnchor: [14, 14]
+    })
+  }).addTo(mapHero).bindPopup(`<strong>Destino:</strong> ${dest.name}`);
 
-  renderRoutes();
-  selectRoute(routesData[0].id);
+  layerRoutes.addTo(mapHero);
+
+  // Auto-ajustar vista para que se vea toda la ruta
+  const bounds = L.latLngBounds([
+    [origin.lat, origin.lng],
+    [dest.lat, dest.lng]
+  ]);
+  routesData.forEach(r => {
+    if (r.geometry) r.geometry.forEach(c => bounds.extend(c));
+  });
+  mapHero.fitBounds(bounds, { padding: [60, 60] });
+}
+
+function highlightRouteOnMap(id) {
+  Object.entries(routePolylines).forEach(([rid, lines]) => {
+    const isActive = rid === id;
+    if (lines.main) {
+      lines.main.setStyle({
+        opacity: isActive ? 1 : 0.4,
+        dashArray: isActive ? null : '6 8',
+        weight: isActive ? 5 : 3
+      });
+    }
+    if (lines.outline) {
+      lines.outline.setStyle({
+        opacity: isActive ? 0.9 : 0.5
+      });
+    }
+  });
 }
 
 function renderRoutes() {
@@ -288,6 +434,12 @@ function selectRoute(id) {
 
   const r = routesData.find(x => x.id === id);
   if (!r) return;
+
+  // Resaltar polilínea en el mapa
+  highlightRouteOnMap(id);
+
+  // Recargar POIs basados en la nueva ruta seleccionada
+  if (r.geometry) loadDynamicPOIs(r.geometry);
 
   // Render detalle
   const body = document.getElementById('route-detail-body');
@@ -438,26 +590,41 @@ function renderFactorList() {
   `).join('');
 }
 
-/* ═════ POIs ═════ */
-function renderPOIs() {
-  // Datos simulados pero con coordenadas reales cerca del Azteca
-  const pois = [
-    { icon: '🏪', name: 'Mercado de Coyoacán',     type: 'Comida tradicional', dist: 4.2, color: '#e8a020' },
-    { icon: '🥑', name: 'La Casa del Pan Coyoacán',type: 'Vegano · Café',      dist: 3.8, color: '#4a7c59' },
-    { icon: '🍔', name: 'El Califa de León',       type: 'Tacos al pastor',    dist: 2.1, color: '#c44b2b' },
-    { icon: '🎨', name: 'Museo Frida Kahlo',       type: 'Cultura',            dist: 5.1, color: '#dd1367' },
-    { icon: '🏥', name: 'Hospital General SR',     type: 'Emergencias 24h',    dist: 1.4, color: '#6ba8b8' },
-    { icon: '⛽', name: 'Pemex Tlalpan',           type: 'Gasolinera',         dist: 0.9, color: '#3a4540' },
-    { icon: '🅿', name: 'Estacionamiento Azteca',  type: 'Capacidad 5,200',    dist: 0.2, color: '#2d5a3d' },
-    { icon: '🚻', name: 'Baños públicos',          type: 'Plaza de la Bandera',dist: 0.5, color: '#fcc30b' }
-  ];
+/* ═════ POIs DINÁMICOS · OVERPASS API ═════ */
+async function loadDynamicPOIs(routeGeometry) {
   const grid = document.getElementById('poi-grid');
+  if (!grid) return;
+
+  // Loading state
+  grid.innerHTML = `
+    <div class="poi-card poi-loading"><div class="spinner"></div><span class="text-mute">Cargando lugares cercanos...</span></div>
+    <div class="poi-card poi-loading"><div class="spinner"></div><span class="text-mute">Consultando OpenStreetMap...</span></div>
+    <div class="poi-card poi-loading"><div class="spinner"></div><span class="text-mute">Filtrando por ruta...</span></div>
+    <div class="poi-card poi-loading"><div class="spinner"></div><span class="text-mute">Ordenando por cercanía...</span></div>
+  `;
+
+  let pois = await getPOIsAlongRoute(routeGeometry, 400);
+
+  // Si Overpass falla o no hay resultados, usamos fallback estático
+  if (!pois || pois.length === 0) {
+    pois = [
+      { icon: '🏪', name: 'Mercado de Coyoacán',     meta: 'Comida tradicional', distance_km: 4.2, color: '#e8a020' },
+      { icon: '🥑', name: 'La Casa del Pan Coyoacán',meta: 'Vegano · Café',      distance_km: 3.8, color: '#4a7c59' },
+      { icon: '🍔', name: 'El Califa de León',       meta: 'Tacos al pastor',    distance_km: 2.1, color: '#c44b2b' },
+      { icon: '🎨', name: 'Museo Frida Kahlo',       meta: 'Cultura',            distance_km: 5.1, color: '#dd1367' },
+      { icon: '🏥', name: 'Hospital General SR',     meta: 'Emergencias 24h',    distance_km: 1.4, color: '#6ba8b8' },
+      { icon: '⛽', name: 'Pemex Tlalpan',           meta: 'Gasolinera',         distance_km: 0.9, color: '#3a4540' },
+      { icon: '🅿', name: 'Estacionamiento Azteca',  meta: 'Capacidad 5,200',    distance_km: 0.2, color: '#2d5a3d' },
+      { icon: '🚻', name: 'Baños públicos',          meta: 'Plaza de la Bandera',distance_km: 0.5, color: '#fcc30b' }
+    ];
+  }
+
   grid.innerHTML = pois.map(p => `
     <article class="poi-card" style="--accent-color: ${p.color};">
       <div class="poi-icon">${p.icon}</div>
-      <h3 class="poi-name">${p.name}</h3>
-      <div class="poi-meta">${p.type}</div>
-      <span class="poi-distance">📍 ${p.dist} km</span>
+      <h3 class="poi-name">${p.name.length > 32 ? p.name.slice(0,30) + '…' : p.name}</h3>
+      <div class="poi-meta">${p.meta}</div>
+      <span class="poi-distance">📍 ${p.distance_km.toFixed(2)} km</span>
     </article>
   `).join('');
 }

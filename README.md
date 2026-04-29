@@ -3,6 +3,10 @@
 **Sistema de Optimización de Movilidad Urbana Sostenible**
 Universidad Iberoamericana — Ciudad de México · 2026
 
+[![Live demo](https://img.shields.io/badge/Live-orlandocamc.github.io%2FSOMUS--26-2d5a3d?style=flat-square)](https://orlandocamc.github.io/SOMUS-26/)
+[![Stack](https://img.shields.io/badge/stack-vanilla%20JS%20%2B%20Leaflet%20%2B%20Chart.js-4a7c59?style=flat-square)]()
+[![License](https://img.shields.io/badge/license-Academic-cddfc0?style=flat-square)]()
+
 ---
 
 > Plataforma de inteligencia urbana que combina visión por computadora, datos
@@ -89,8 +93,8 @@ IPCC AR6. Ningún factor inventado.
 ## Cómo correr localmente
 
 ```bash
-git clone https://github.com/victorapc0901-lgtm/SOMUS.git
-cd SOMUS
+git clone https://github.com/orlandocamc/SOMUS-26.git
+cd SOMUS-26
 # Cualquier servidor estático funciona
 python3 -m http.server 8000
 # o
@@ -107,7 +111,7 @@ publica automáticamente en pocos minutos.
 ## Equipo
 
 - **Daniel Orlando Camacho Campos** — Lead IA & Visión por computadora
-- **Víctor** — Lead Frontend & UX
+- **Víctor Alejandro Palacios Castillo** — Lead Frontend & UX
 - **Asesoría académica** — Prof. Georgina Paredes
 
 Curso: *Tecnologías para el Desarrollo Sostenible*, Universidad Iberoamericana CDMX.

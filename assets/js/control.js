@@ -299,13 +299,15 @@ function renderAlerts() {
   const list = document.getElementById('alerts-list');
   list.innerHTML = SOMUS_DATA.alerts.map(a => `
     <div class="alert-row ${a.sev}">
-      <div class="alert-sev"></div>
-      <div class="alert-time">${a.time}</div>
-      <div class="alert-info">
+      <div class="alert-bar"></div>
+      <div class="alert-body">
+        <div class="alert-meta">
+          <span class="alert-time">${a.time}</span>
+          <span class="alert-mode-tag mode-${a.mode}">${a.mode.toUpperCase()}</span>
+        </div>
         <div class="alert-loc">${a.loc}</div>
         <div class="alert-msg">${a.msg}</div>
       </div>
-      <span class="alert-mode">${a.mode}</span>
     </div>
   `).join('');
 

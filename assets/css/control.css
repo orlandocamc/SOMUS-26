@@ -315,62 +315,72 @@
 }
 .alert-row {
   display: grid;
-  grid-template-columns: 4px 56px 1fr auto;
+  grid-template-columns: 4px 1fr;
   gap: 12px;
-  padding: 12px 12px 12px 8px;
+  padding: 12px;
   background: rgba(184, 233, 134, 0.02);
   border: 1px solid var(--border);
   border-radius: var(--r-md);
-  align-items: center;
   transition: background var(--t-fast);
-  position: relative;
+  align-items: stretch;
 }
 .alert-row:hover { background: rgba(184, 233, 134, 0.06); }
 
-.alert-sev {
-  width: 4px; height: 100%;
+.alert-bar {
   border-radius: 2px;
   background: var(--sage-bright);
-  position: absolute;
-  top: 0; left: 0;
-  bottom: 0;
+  min-height: 100%;
 }
-.alert-row.high .alert-sev   { background: var(--coral); }
-.alert-row.medium .alert-sev { background: var(--amber); }
-.alert-row.low .alert-sev    { background: var(--sky); }
+.alert-row.high .alert-bar   { background: var(--coral); }
+.alert-row.medium .alert-bar { background: var(--amber); }
+.alert-row.low .alert-bar    { background: var(--sky); }
 
+.alert-body {
+  display: flex; flex-direction: column; gap: 6px;
+  min-width: 0;
+}
+.alert-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
 .alert-time {
   font-family: var(--font-mono);
   font-size: 0.7rem;
   color: var(--text-dim);
   letter-spacing: 0.05em;
-  margin-left: 12px;
 }
-.alert-info { display: flex; flex-direction: column; gap: 4px; }
+.alert-mode-tag {
+  font-family: var(--font-mono);
+  font-size: 0.55rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  padding: 2px 7px;
+  border-radius: 3px;
+  background: rgba(184, 233, 134, 0.1);
+  color: var(--sage-bright);
+  white-space: nowrap;
+}
+.alert-mode-tag.mode-traffic { background: rgba(232, 101, 75, 0.15); color: var(--coral); }
+.alert-mode-tag.mode-metro   { background: rgba(232, 160, 32, 0.15); color: var(--amber); }
+.alert-mode-tag.mode-bike    { background: rgba(107, 168, 184, 0.15); color: var(--sky); }
+
 .alert-loc {
   font-family: var(--font-mono);
   font-size: 0.6rem;
-  letter-spacing: 0.12em;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
   color: var(--text-mute);
+  overflow-wrap: anywhere;
 }
 .alert-msg {
   font-size: 0.82rem;
   color: var(--cream);
   font-weight: 500;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
 }
-.alert-mode {
-  font-family: var(--font-mono);
-  font-size: 0.55rem;
-  letter-spacing: 0.15em;
-  text-transform: uppercase;
-  padding: 4px 8px;
-  border-radius: 4px;
-  background: rgba(184, 233, 134, 0.08);
-  color: var(--sage-bright);
-}
-.alert-row.high  .alert-mode { background: rgba(232, 101, 75, 0.15); color: var(--coral); }
-.alert-row.medium .alert-mode { background: rgba(232, 160, 32, 0.15); color: var(--amber); }
 
 /* ── AIR + MODAL MIX ───────────────────────────────── */
 .air-list {
