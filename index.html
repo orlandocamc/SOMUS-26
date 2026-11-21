@@ -93,7 +93,7 @@
       <div class="search-fields">
         <div class="input-group">
           <label class="input-label">Origen</label>
-          <input class="input" id="i-origin" type="text" placeholder="Polanco, CDMX" value="Polanco, CDMX" />
+          <input class="input" id="i-origin" type="text" list="place-list" placeholder="Polanco, CDMX" value="Polanco, CDMX" />
         </div>
         <div class="search-arrow" aria-hidden="true">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
@@ -102,7 +102,7 @@
         </div>
         <div class="input-group">
           <label class="input-label">Destino</label>
-          <input class="input" id="i-dest" type="text" placeholder="Estadio Azteca" value="Estadio Azteca" />
+          <input class="input" id="i-dest" type="text" list="place-list" placeholder="Estadio Azteca" value="Estadio Azteca" />
         </div>
         <div class="input-group">
           <label class="input-label">Llegada</label>
@@ -117,6 +117,16 @@
             <option value="cheap">Más económica</option>
           </select>
         </div>
+<datalist id="place-list">
+          <option value="Estadio Azteca"></option><option value="Polanco, CDMX"></option>
+          <option value="Centro Histórico"></option><option value="Roma, CDMX"></option>
+          <option value="Condesa, CDMX"></option><option value="Coyoacán"></option>
+          <option value="Tlalpan"></option><option value="Ciudad Universitaria"></option>
+          <option value="Paseo de la Reforma"></option><option value="Auditorio Nacional"></option>
+          <option value="AICM Terminal 2"></option>
+        </datalist>
+        <p id="route-unavailable" role="alert" hidden style="grid-column:1/-1;margin:6px 0 0;font-size:0.8rem;color:#c44b2b;"></p>
+        <p style="grid-column:1/-1;margin:6px 0 0;font-size:0.7rem;opacity:0.7;">Demo con rutas pre-calculadas entre lugares predefinidos. Tiempos de los tramos de Metro/Metrobús: <strong>estimated</strong> (no hay datos de transporte público en tiempo real).</p>
         <button class="btn btn-primary btn-search" onclick="calcularRutas()">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 12h18M13 6l6 6-6 6"/></svg>
           Calcular
@@ -348,6 +358,8 @@
       <a href="https://gbfs.mex.lyftbikes.com" target="_blank">ECOBICI GBFS</a>
       <a href="https://aire.cdmx.gob.mx" target="_blank">SIMAT</a>
       <a href="https://datos.cdmx.gob.mx" target="_blank">Datos Abiertos</a>
+      <a href="https://project-osrm.org/" target="_blank" rel="noopener">Routing: OSRM</a>
+      <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">© OpenStreetMap contributors (ODbL)</a>
     </div>
     <div class="foot-col">
       <h4>Académico</h4>
@@ -365,7 +377,7 @@
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
-  <script src="assets/js/data.js?v=460502"></script>
-  <script src="assets/js/main.js?v=460502"></script>
+  <script src="assets/js/data.js?v=routes1"></script>
+  <script src="assets/js/main.js?v=routes1"></script>
 </body>
 </html>

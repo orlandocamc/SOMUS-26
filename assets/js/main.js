@@ -21,7 +21,7 @@ let isCalculating = false;
 
 // ── Tile layer minimal (CartoDB Positron-like) ─────────
 const TILE_CARTO = 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png';
-const TILE_ATTRIB = '© OpenStreetMap, © CARTO';
+const TILE_ATTRIB = '© OpenStreetMap contributors (ODbL), © CARTO · Routing: OSRM';
 
 document.addEventListener('DOMContentLoaded', () => {
   initHeroMap();
@@ -39,7 +39,7 @@ function initHeroMap() {
     center: [19.405, -99.165],
     zoom: 12,
     zoomControl: false,
-    attributionControl: false
+    attributionControl: true
   });
   L.tileLayer(TILE_CARTO, { attribution: TILE_ATTRIB, subdomains: 'abcd', maxZoom: 19 }).addTo(mapHero);
 
@@ -148,7 +148,7 @@ function initTicker() {
   document.getElementById('ticker').innerHTML = html;
 }
 
-/* ═════ OPTIMIZADOR DE RUTAS REAL (ORS + Nominatim) ═════ */
+/* ═════ OPTIMIZADOR DE RUTAS REAL (rutas pre-calculadas OSRM) ═════ */
 async function calcularRutas() {
   if (isCalculating) return;
   isCalculating = true;
@@ -159,16 +159,26 @@ async function calcularRutas() {
   const priority  = document.getElementById('i-priority').value;
 
   try {
-    // 1. Geocoding paralelo
+    // 1. Resolver origen y destino contra el catálogo curado
     const [origin, dest] = await Promise.all([geocode(originStr), geocode(destStr)]);
+    if (!origin || !dest || origin.id === dest.id) {
+      showRouteUnavailable(!origin || !dest
+        ? 'Route not available in this demo: choose origin and destination from the suggested places.'
+        : 'Route not available in this demo: origin and destination are the same place.');
+      return;
+    }
 
-    // 2. Calcular 3 rutas en paralelo (3 perfiles ORS)
+    // 2. Leer las 3 rutas pre-calculadas (auto, bici, a pie)
     const driveCoords = [[origin.lat, origin.lng], [dest.lat, dest.lng]];
     const [routeDrive, routeBike, routeWalk] = await Promise.all([
-      getRoute(driveCoords, 'driving-car'),
-      getRoute(driveCoords, 'cycling-regular'),
-      getRoute(driveCoords, 'foot-walking')
+      getRoute(origin.id, dest.id, 'driving-car'),
+      getRoute(origin.id, dest.id, 'cycling-regular'),
+      getRoute(origin.id, dest.id, 'foot-walking')
     ]);
+    if (!routeDrive || !routeBike) {
+      showRouteUnavailable('Route not available in this demo for this origin and destination.');
+      return;
+    }
 
     // Distancia base en km
     const distanceKm = (routeDrive?.distance_m || 15000) / 1000;
@@ -228,7 +238,7 @@ async function calcularRutas() {
         modes: [
           { mode: 'car_pooled', label: 'Auto', icon: '🚙', km: distanceKm }
         ],
-        // Tiempo de ORS × 1.4 por tráfico CDMX hora pico
+        // Tiempo OSRM × 1.4 por tráfico CDMX hora pico
         time: Math.round(((routeDrive?.duration_s || distanceKm * 90) / 60) * 1.4 + 5),
         cost: Math.round(distanceKm * 4.5),
         transfers: 0,
@@ -259,6 +269,8 @@ async function calcularRutas() {
     // POIs reales basados en la ruta seleccionada (la primera, recomendada)
     loadDynamicPOIs(routesData[0].geometry);
 
+    const nb = document.getElementById('route-unavailable');
+    if (nb) nb.hidden = true;
     // Indicador en el mapa
     showToast(`Rutas calculadas: ${origin.name} → ${dest.name}`);
   } catch (e) {
@@ -268,6 +280,12 @@ async function calcularRutas() {
     isCalculating = false;
     setSearchLoading(false);
   }
+}
+
+function showRouteUnavailable(msg) {
+  showToast(msg, 6000);
+  const box = document.getElementById('route-unavailable');
+  if (box) { box.textContent = msg; box.hidden = false; }
 }
 
 function setSearchLoading(loading) {

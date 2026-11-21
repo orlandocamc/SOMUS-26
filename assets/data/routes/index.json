@@ -1,0 +1,125 @@
+{
+ "modes": [
+  "driving",
+  "cycling",
+  "walking"
+ ],
+ "places": [
+  {
+   "id": "azteca",
+   "name": "Estadio Azteca",
+   "lat": 19.3029,
+   "lng": -99.1505,
+   "aliases": [
+    "estadio azteca",
+    "azteca"
+   ]
+  },
+  {
+   "id": "polanco",
+   "name": "Polanco, CDMX",
+   "lat": 19.4338,
+   "lng": -99.1925,
+   "aliases": [
+    "polanco",
+    "polanco, cdmx"
+   ]
+  },
+  {
+   "id": "centro",
+   "name": "Centro Histórico",
+   "lat": 19.4326,
+   "lng": -99.1332,
+   "aliases": [
+    "centro",
+    "centro histórico",
+    "centro historico",
+    "zocalo",
+    "zócalo"
+   ]
+  },
+  {
+   "id": "roma",
+   "name": "Roma, CDMX",
+   "lat": 19.4151,
+   "lng": -99.1623,
+   "aliases": [
+    "roma",
+    "roma norte",
+    "roma, cdmx"
+   ]
+  },
+  {
+   "id": "condesa",
+   "name": "Condesa, CDMX",
+   "lat": 19.4128,
+   "lng": -99.1734,
+   "aliases": [
+    "condesa",
+    "condesa, cdmx"
+   ]
+  },
+  {
+   "id": "coyoacan",
+   "name": "Coyoacán",
+   "lat": 19.35,
+   "lng": -99.1622,
+   "aliases": [
+    "coyoacán",
+    "coyoacan"
+   ]
+  },
+  {
+   "id": "tlalpan",
+   "name": "Tlalpan",
+   "lat": 19.2924,
+   "lng": -99.1622,
+   "aliases": [
+    "tlalpan"
+   ]
+  },
+  {
+   "id": "cu",
+   "name": "Ciudad Universitaria",
+   "lat": 19.3274,
+   "lng": -99.1736,
+   "aliases": [
+    "cu",
+    "ciudad universitaria",
+    "unam"
+   ]
+  },
+  {
+   "id": "reforma",
+   "name": "Paseo de la Reforma",
+   "lat": 19.4232,
+   "lng": -99.1675,
+   "aliases": [
+    "reforma",
+    "paseo de la reforma"
+   ]
+  },
+  {
+   "id": "auditorio",
+   "name": "Auditorio Nacional",
+   "lat": 19.4257,
+   "lng": -99.1898,
+   "aliases": [
+    "auditorio",
+    "auditorio nacional"
+   ]
+  },
+  {
+   "id": "aicm",
+   "name": "AICM Terminal 2",
+   "lat": 19.4361,
+   "lng": -99.0719,
+   "aliases": [
+    "aicm",
+    "aeropuerto",
+    "aeropuerto cdmx",
+    "aicm terminal 2"
+   ]
+  }
+ ]
+}

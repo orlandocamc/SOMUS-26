@@ -8,12 +8,9 @@
 /* ── CONFIG GLOBAL ─────────────────────────────────────
    DEMO_HOUR · número 0-23 fuerza hora del demo
               · null usa hora real (con fallback a hora pico en madrugada)
-   ORS_KEY   · OpenRouteService API key (free tier, sin riesgo financiero)
 */
 const DEMO_HOUR = null; // cambiar a 18 para forzar hora pico siempre
-const ORS_KEY = 'eyJvcmciOiI1YjNjZTM1OTc4NTExMTAwMDFjZjYyNDgiLCJpZCI6ImM2ZmVmZjAxYmIzODQyNjE4MTBlNDViNmQ3MDQ5MTdmIiwiaCI6Im11cm11cjY0In0=';
-const ORS_BASE = 'https://api.openrouteservice.org/v2/directions';
-const NOMINATIM = 'https://nominatim.openstreetmap.org/search';
+const ROUTES_DIR = 'assets/data/routes';  // rutas pre-calculadas (OSRM, © OpenStreetMap contributors, ODbL)
 const OVERPASS = 'https://overpass-api.de/api/interpreter';
 
 const SOMUS_DATA = {
@@ -262,109 +259,49 @@ async function fetchEcobiciLive() {
    APIs REALES · Geocoding · Routing · POIs
    ═══════════════════════════════════════════════════════ */
 
-const _geocodeCache = new Map();
+let _placesPromise = null;
 
-/** Geocoding con Nominatim (OSM) · sesgado a CDMX */
-async function geocode(query) {
-  const key = query.trim().toLowerCase();
-  if (_geocodeCache.has(key)) return _geocodeCache.get(key);
-
-  // Atajos para destinos comunes (instantáneo, sin red)
-  const shortcuts = {
-    'estadio azteca':    { lat: 19.3029, lng: -99.1505, name: 'Estadio Azteca' },
-    'azteca':            { lat: 19.3029, lng: -99.1505, name: 'Estadio Azteca' },
-    'polanco':           { lat: 19.4338, lng: -99.1925, name: 'Polanco, CDMX' },
-    'polanco, cdmx':     { lat: 19.4338, lng: -99.1925, name: 'Polanco, CDMX' },
-    'centro':            { lat: 19.4326, lng: -99.1332, name: 'Centro Histórico' },
-    'centro histórico':  { lat: 19.4326, lng: -99.1332, name: 'Centro Histórico' },
-    'roma':              { lat: 19.4151, lng: -99.1623, name: 'Roma, CDMX' },
-    'roma norte':        { lat: 19.4180, lng: -99.1672, name: 'Roma Norte' },
-    'condesa':           { lat: 19.4128, lng: -99.1734, name: 'Condesa, CDMX' },
-    'coyoacán':          { lat: 19.3500, lng: -99.1622, name: 'Coyoacán' },
-    'coyoacan':          { lat: 19.3500, lng: -99.1622, name: 'Coyoacán' },
-    'tlalpan':           { lat: 19.2924, lng: -99.1622, name: 'Tlalpan' },
-    'cu':                { lat: 19.3274, lng: -99.1736, name: 'Ciudad Universitaria' },
-    'ciudad universitaria': { lat: 19.3274, lng: -99.1736, name: 'CU' },
-    'reforma':           { lat: 19.4232, lng: -99.1675, name: 'Paseo de la Reforma' },
-    'auditorio':         { lat: 19.4257, lng: -99.1898, name: 'Auditorio Nacional' },
-    'aicm':              { lat: 19.4361, lng: -99.0719, name: 'AICM Terminal 2' },
-    'aeropuerto':        { lat: 19.4361, lng: -99.0719, name: 'Aeropuerto CDMX' }
-  };
-  if (shortcuts[key]) {
-    _geocodeCache.set(key, shortcuts[key]);
-    return shortcuts[key];
+/** Carga el catálogo de lugares con rutas pre-calculadas */
+function loadPlaces() {
+  if (!_placesPromise) {
+    _placesPromise = fetch(`${ROUTES_DIR}/index.json`)
+      .then(r => { if (!r.ok) throw new Error(`index.json ${r.status}`); return r.json(); })
+      .then(idx => idx.places);
   }
-
-  // Llamada a Nominatim · sesgo a CDMX vía viewbox
-  try {
-    const url = `${NOMINATIM}?q=${encodeURIComponent(query)}&format=json&limit=1` +
-                `&countrycodes=mx&viewbox=-99.4,19.6,-98.9,19.1&bounded=1`;
-    const r = await fetch(url, { headers: { 'Accept-Language': 'es' } });
-    if (!r.ok) throw new Error('Nominatim error');
-    const data = await r.json();
-    if (!data || data.length === 0) throw new Error('No results');
-    const result = {
-      lat: parseFloat(data[0].lat),
-      lng: parseFloat(data[0].lon),
-      name: data[0].display_name.split(',').slice(0, 2).join(', ')
-    };
-    _geocodeCache.set(key, result);
-    return result;
-  } catch (e) {
-    console.warn('Geocode fallback:', query, e);
-    // Fallback: centro CDMX
-    return { lat: 19.4326, lng: -99.1332, name: query };
-  }
+  return _placesPromise;
 }
 
-/** Routing real con OpenRouteService
- *  profile: 'driving-car' · 'cycling-regular' · 'foot-walking'
- *  coords: [[lat,lng], [lat,lng], ...]
- *  return: { coords: [[lat,lng],...], distance_m, duration_s, profile } */
-async function getRoute(coords, profile = 'driving-car') {
-  if (!coords || coords.length < 2) return null;
+/** Resuelve un texto a un lugar del catálogo curado (sin red externa).
+ *  Devuelve null si no es uno de los lugares disponibles en la demo. */
+async function geocode(query) {
+  const key = query.trim().toLowerCase();
+  const places = await loadPlaces();
+  const hit = places.find(p => p.id === key || p.name.toLowerCase() === key || p.aliases.includes(key));
+  return hit ? { id: hit.id, lat: hit.lat, lng: hit.lng, name: hit.name } : null;
+}
 
-  // ORS espera [lng, lat] - cuidado al voltear
-  const orsCoords = coords.map(([lat, lng]) => [lng, lat]);
+const ROUTE_MODES = { 'driving-car': 'driving', 'cycling-regular': 'cycling', 'foot-walking': 'walking' };
 
+/** Ruta pre-calculada (OSRM) entre dos lugares del catálogo.
+ *  from, to: ids de lugar · profile: 'driving-car' | 'cycling-regular' | 'foot-walking'
+ *  return: { coords: [[lat,lng],...], distance_m, duration_s, profile } o null si no existe */
+async function getRoute(from, to, profile = 'driving-car') {
+  const mode = ROUTE_MODES[profile];
+  if (!from || !to || !mode) return null;
   try {
-    const r = await fetch(`${ORS_BASE}/${profile}/geojson`, {
-      method: 'POST',
-      headers: {
-        'Authorization': ORS_KEY,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        coordinates: orsCoords,
-        instructions: false,
-        units: 'm'
-      })
-    });
-    if (!r.ok) {
-      const txt = await r.text();
-      throw new Error(`ORS ${r.status}: ${txt.slice(0, 200)}`);
-    }
-    const data = await r.json();
-    const feat = data.features[0];
+    const r = await fetch(`${ROUTES_DIR}/${from}__${to}__${mode}.geojson`);
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    const feat = (await r.json()).features[0];
     return {
-      // Convertir [lng,lat] → [lat,lng] para Leaflet
+      // GeoJSON [lng,lat] → [lat,lng] para Leaflet
       coords: feat.geometry.coordinates.map(([lng, lat]) => [lat, lng]),
-      distance_m: feat.properties.summary.distance,
-      duration_s: feat.properties.summary.duration,
+      distance_m: feat.properties.distance_m,
+      duration_s: feat.properties.duration_s,
       profile: profile
     };
   } catch (e) {
-    console.warn('ORS error, fallback a línea recta:', e);
-    // Fallback: línea recta + estimación
-    const dist = haversine(coords[0][0], coords[0][1], coords[coords.length-1][0], coords[coords.length-1][1]) * 1000;
-    const speed = profile === 'driving-car' ? 8.3 : profile === 'cycling-regular' ? 4.2 : 1.4; // m/s
-    return {
-      coords: coords,
-      distance_m: dist,
-      duration_s: dist / speed,
-      profile: profile,
-      _fallback: true
-    };
+    console.warn('Route not available:', from, to, mode, e);
+    return null;
   }
 }
 
@@ -492,6 +429,7 @@ if (typeof window !== 'undefined') {
   window.showToast = showToast;
   window.fetchEcobiciLive = fetchEcobiciLive;
   window.geocode = geocode;
+  window.loadPlaces = loadPlaces;
   window.getRoute = getRoute;
   window.nearestMetro = nearestMetro;
   window.nearestEcobici = nearestEcobici;

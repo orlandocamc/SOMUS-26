@@ -107,6 +107,32 @@ npx serve .
 
 Abrir `http://localhost:8000`.
 
+## Routing
+
+El planeador **no usa ninguna clave ni API de pago**. Las rutas de auto, bici y caminata
+entre los lugares predefinidos (Estadio Azteca, Polanco, Centro Histórico, Roma, Condesa,
+Coyoacán, Tlalpan, Ciudad Universitaria, Reforma, Auditorio Nacional y AICM; todos los
+pares ordenados) están pre-calculadas y guardadas como GeoJSON en
+`assets/data/routes/` (`<origen>__<destino>__<driving|cycling|walking>.geojson`, con
+`distance_m` y `duration_s`; el catálogo de lugares está en `index.json`). El JS solo lee
+esos archivos; si se pide un par que no existe muestra «Route not available in this demo».
+
+Los tramos de Metro/Metrobús y los tiempos multimodales son **estimaciones** (marcadas
+como *estimated* en la interfaz), no datos de transporte público.
+
+Para regenerarlas (biblioteca estándar de Python, 1 petición por segundo, User-Agent genérico):
+
+```bash
+python tools/precompute_routes.py          # omite archivos existentes
+python tools/precompute_routes.py --force  # regenera todo
+```
+
+Servidores usados: OSRM demo (`router.project-osrm.org`) para auto y
+`routing.openstreetmap.de` (bike/foot) para bici y caminata.
+
+**Atribución:** routing por [OSRM](https://project-osrm.org/); datos de mapa
+© [OpenStreetMap contributors](https://www.openstreetmap.org/copyright), licencia ODbL.
+
 ## Despliegue
 
 GitHub Pages está configurado por defecto. Cualquier `git push` a `main`
@@ -117,7 +143,7 @@ publica automáticamente en pocos minutos.
 **Implementado (en este repositorio)**
 - Las tres vistas web (planeador multimodal, Centro de Control, Pipeline IA) en HTML/CSS/JS vanilla, desplegadas en GitHub Pages.
 - Cálculo de CO₂ por modo de transporte con factores de emisión referenciados a SEMARNAT 2023.
-- Routing con OpenRouteService, geocodificación con Nominatim y POIs con Overpass (commit `d555bed`).
+- Routing con rutas pre-calculadas de OSRM (ver «Routing»), selección de origen/destino entre lugares predefinidos y POIs con Overpass.
 - Un pipeline offline de detección con YOLOv8n (`pipeline/process.py`) que dibuja las cajas sobre videos y produjo los tres videos de `assets/video/` que se muestran en el Centro de Control. La inferencia se corrió por lotes sobre videos, no en vivo.
 
 **Propuesto (no implementado)**
