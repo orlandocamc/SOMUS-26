@@ -56,6 +56,10 @@ Universidad Iberoamericana — Ciudad de México · 2026
 | OpenStreetMap (Overpass) | API pública | ● Activo |
 | YOLOv8 / Ultralytics | Modelo pre-entrenado COCO | ● Activo |
 
+> **Nota:** la columna «Estado» de la tabla anterior describe el diseño del sistema. Lo que
+> realmente existe hoy está en la sección *Implementado vs. propuesto*. En particular, el acceso
+> a cámaras del C5 era una **propuesta** de convenio institucional, no un convenio logrado.
+
 **Factores de emisión** referenciados a [SEMARNAT 2023](https://www.gob.mx/semarnat) e
 IPCC AR6. Ningún factor inventado.
 
@@ -108,17 +112,48 @@ Abrir `http://localhost:8000`.
 GitHub Pages está configurado por defecto. Cualquier `git push` a `main`
 publica automáticamente en pocos minutos.
 
-## Equipo
+## Implementado vs. propuesto
 
-- **Daniel Orlando Camacho Campos** — Lead IA & Visión por computadora
-- **Víctor Alejandro Palacios Castillo** — Lead Frontend & UX
-- **Asesoría académica** — Prof. Georgina Paredes
+**Implementado (en este repositorio)**
+- Las tres vistas web (planeador multimodal, Centro de Control, Pipeline IA) en HTML/CSS/JS vanilla, desplegadas en GitHub Pages.
+- Cálculo de CO₂ por modo de transporte con factores de emisión referenciados a SEMARNAT 2023.
+- Routing con OpenRouteService, geocodificación con Nominatim y POIs con Overpass (commit `d555bed`).
+- Un pipeline offline de detección con YOLOv8n (`pipeline/process.py`) que dibuja las cajas sobre videos y produjo los tres videos de `assets/video/` que se muestran en el Centro de Control. La inferencia se corrió por lotes sobre videos, no en vivo.
 
-Curso: *Tecnologías para el Desarrollo Sostenible*, Universidad Iberoamericana CDMX.
+**Propuesto (no implementado)**
+- Convenio institucional con el C5 CDMX para recibir sus cámaras (RTSP). Fue una propuesta; no hay convenio ni acceso a cámaras reales.
+- Inferencia en el borde con Raspberry Pi 5 + ONNX Runtime, y el agregador MQTT + base de datos.
+- Las cifras del diagrama de arquitectura (2 412 nodos, 30 FPS, 14 380 evt/s) son parte de esa propuesta.
+- El Centro de Control muestra KPIs que se generan de forma simulada en el navegador (`assets/js/control.js` usa valores aleatorios alrededor de una base), y la demo del Pipeline IA lo indica como «inferencia simulada». No son mediciones.
+
+## Equipo y roles
+
+| Persona | Rol |
+|---|---|
+| Daniel Orlando Camacho Campos (Orlando) | Lead IA & Visión por computadora: pipeline YOLO, routing y videos procesados |
+| Víctor Alejandro Palacios Castillo | Lead Frontend & UX |
+| Prof. Georgina Paredes | Asesoría académica |
+
+Desarrollado en la primavera de 2026 (primeros commits de abril de 2026) para *Tecnologías para el Desarrollo Sostenible*, Universidad Iberoamericana CDMX.
+
+## Pipeline de detección (`pipeline/process.py`)
+
+Procesa `cam01.mp4 … cam04.mp4` con YOLOv8n y escribe videos con cajas en la paleta de SOMUS-26.
+Los videos de entrada y el modelo `yolov8n.pt` **no** están en el repositorio (`.gitignore` excluye `*.mp4` y `*.pt`; los tres videos ya procesados de `assets/video/` sí están versionados).
+
+```bash
+pip install ultralytics opencv-python
+# colocar cam01.mp4 ... y yolov8n.pt junto al script (Ultralytics descarga el modelo si falta)
+python pipeline/process.py
+```
+
+## Licencia y AGPL-3.0
+
+El código propio es un proyecto académico. El pipeline usa **YOLOv8 de Ultralytics, licenciado bajo AGPL-3.0**: quien distribuya o ponga en red un software derivado que lo use debe cumplir esa licencia (o contar con una licencia comercial de Ultralytics). Los pesos `yolov8n.pt` no se redistribuyen aquí.
 
 ## Licencia
 
-Proyecto académico. Datos de SEMARNAT, ECOBICI y SIMAT bajo sus respectivas
+Proyecto académico (ver también la sección AGPL-3.0). Datos de SEMARNAT, ECOBICI y SIMAT bajo sus respectivas
 licencias públicas. Modelo YOLOv8 bajo AGPL-3.0 (Ultralytics).
 
 ---
